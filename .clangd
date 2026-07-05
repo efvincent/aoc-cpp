@@ -1,0 +1,14 @@
+CompileFlags:
+  Add: [-std=c++23]
+
+---
+If:
+  PathMatch: .*\.cppm
+CompileFlags:
+  Add: [-xc++-module, -fprebuilt-module-path=build/debug/modules]
+
+---
+If:
+  PathMatch: .*src/base/core_memory\.cppm
+Diagnostics:
+  UnusedIncludes: None

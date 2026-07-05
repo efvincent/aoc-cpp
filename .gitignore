@@ -1,0 +1,9 @@
+build/
+
+# Generated tooling metadata
+compile_commands.json
+.cache/
+
+# Generated Doxygen output
+docs/html/
+docs/latex/

@@ -1,0 +1,21 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "make": true
+  },
+  "files.associations": {
+    "*.cppm": "cpp"
+  },
+  "C_Cpp.files.associations": {
+    "*.cppm": "cpp"
+  },
+  "C_Cpp.intelliSenseEngine": "Disabled",
+  "C_Cpp.errorSquiggles": "Disabled",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}",
+    "--background-index",
+    "--header-insertion=never",
+    "--completion-style=detailed",
+    "--clang-tidy"
+  ],
+  "uncrustify.executablePath.linux": "/usr/bin/uncrustify"
+}
