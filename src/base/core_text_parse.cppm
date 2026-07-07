@@ -243,7 +243,9 @@ export namespace base {
    * Supports optional sign, fractional part, and exponent marker (`e`/`E`).
    *
    * @param text Input byte slice.
-   * @return Parsed `f64` or error if no digits are present.
+   * @return Parsed `f64` on full-slice success; otherwise an error for empty
+   *         input, invalid exponent, exponent overflow, trailing characters,
+   *         or missing digits.
    */
   constexpr ResultS<f64> parse_f64(Str8 text) {
     if (text.len == 0) {

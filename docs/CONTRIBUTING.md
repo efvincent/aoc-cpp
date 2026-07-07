@@ -20,7 +20,7 @@ We treat C++ strictly as a **"Better C Compiler."** We purposefully reject compl
 
 ### Allowed Language Features
 1. **C++20/23 Modules:** Used explicitly (`export module`, `import`) to isolate subsystem scopes cleanly and maintain fast compilation graphs without standard textual header repetition layout issues.
-2. **C++ Templates:** Allowed *only* for type-generic container construction (e.g., custom generic `Array<T>` or `Hashmap<K, V>`). Deep compile-time recursive metaprogramming tricks are rejected.
+2. **C++ Templates:** Allowed for zero-cost generic utilities where they reduce duplication without hiding control flow (for example, parser helpers, cursor consume helpers, or type-generic containers). Deep compile-time recursive metaprogramming tricks are rejected.
 3. **Struct-Scoped Methods:** Used solely for syntactic convenience and low-overhead modular ergonomics without object-oriented state dispatch.
 
 ---

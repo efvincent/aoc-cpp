@@ -160,7 +160,7 @@ export namespace base {
       if (this->input.str == nullptr || this->input.len == 0) {
         return Str8(nullptr, 0);
       }
-      
+
       u64 start = this->offset;
       u8 first = peek();
 
@@ -207,13 +207,20 @@ export namespace base {
     }
 
     /**
-     * @brief Consume an integer prefix and parse it through strict parser backend.
+     * @brief Consume an integer prefix and parse it through a strict parser backend.
      *
      * Unsigned targets consume `[0-9]+`. Signed targets consume `[+|-]?[0-9]+`.
      * The consumed window is then delegated to a strict `parse_*` function.
      *
+     * Failure semantics:
+     * - If no valid integer prefix exists at the current offset, this returns error
+     *   and does not advance the cursor.
+     * - If a candidate prefix is consumed and strict parsing fails (for example,
+     *   overflow), the cursor remains advanced to the end of that consumed prefix.
+     *   This is intentional for forward progress and error-accumulation workflows.
+     *
      * @tparam T Integer output type.
-     * @param parser Strict parser callback (`ResultS<T>(*)(Str8)`).
+     * @param parser Strict parser callback (`ResultS<T> (*)(Str8)`).
      */
     template <typename T>
     constexpr ResultS<T> consume_int_impl(ResultS<T> (*parser)(Str8)) {
@@ -289,6 +296,16 @@ export namespace base {
 
     /**
      * @brief Consume `[+|-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+|-]?[0-9]+)?` and parse as `f64`.
+     *
+     * Failure semantics:
+     * - If no valid floating prefix exists at the current offset, this returns error
+     *   and does not advance the cursor.
+     * - If a syntactically valid candidate prefix is consumed, strict parse
+     *   validation is applied to that slice. If strict parsing fails, the cursor
+     *   remains advanced to the end of the consumed prefix (no rewind).
+     *
+     * This behavior is intentional for recovery-friendly, whole-buffer parsing
+     * pipelines such as language-server style error accumulation.
      */
     constexpr ResultS<f64> consume_f64() {
       u64 start = this->offset;

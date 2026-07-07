@@ -25,8 +25,8 @@ import core_memory;
 export namespace base {
   /**
    * @brief Non-owning UTF-8 byte-string view.
-    * @note The view is not null-terminated by contract.
-    * @note Lifetime is owned externally, commonly by Arena.
+   * @note The view is not null-terminated by contract.
+   * @note Lifetime is owned externally, commonly by Arena.
    */
   struct Str8 {
     /** @brief Pointer to first byte of the string view. */
@@ -45,7 +45,7 @@ export namespace base {
      * @brief Constructs a string view from raw pointer and explicit length.
      * @param target_str Pointer to first byte.
      * @param target_len Length in bytes.
-      * @post The instance references the provided memory without owning it.
+     * @post The instance references the provided memory without owning it.
      */
     constexpr Str8(u8* target_str, u64 target_len) {
       this->str = target_str;
@@ -55,7 +55,7 @@ export namespace base {
     /**
      * @brief Constructs a view from a string literal, excluding trailing null.
      * @tparam N Literal array length including null terminator.
-      * @post len is N - 1.
+     * @post len is N - 1.
      */
     template<u64 N>
     constexpr Str8(const char (&literal)[N]) {
@@ -68,8 +68,8 @@ export namespace base {
      * @param start Inclusive starting byte offset.
      * @param end Exclusive ending byte offset.
      * @return A Str8 view into the original storage.
-      * @pre start <= end.
-      * @pre end <= len.
+     * @pre start <= end.
+     * @pre end <= len.
      */
     constexpr Str8 slice(u64 start, u64 end) const {
       // Dev-time check using universal macro
@@ -90,7 +90,7 @@ export namespace base {
 
   /**
    * @brief Builder structure for concatenating many Str8 segments efficiently.
-    * @note Nodes are expected to come from a scratch Arena.
+   * @note Nodes are expected to come from a scratch Arena.
    */
   struct Str8List {
     /** @brief First node in list. */
@@ -106,7 +106,7 @@ export namespace base {
      * @brief Appends a non-empty segment to the list.
      * @param scratch_arena Arena used for node allocation.
      * @param string Segment to append.
-      * @post node_count increments when string is non-empty.
+     * @post node_count increments when string is non-empty.
      */
     void push(Arena* scratch_arena, Str8 string) {
       if (string.len == 0) return;
@@ -134,7 +134,7 @@ export namespace base {
    * @param permanent_arena Arena used for destination allocation.
    * @param list Input linked list of segments.
    * @return Joined string view; empty view if input is empty.
-    * @post Returned memory is owned by \p permanent_arena.
+   * @post Returned memory is owned by \p permanent_arena.
    */
   Str8 str8_list_join(Arena* permanent_arena, Str8List list) {
     if (list.total_len == 0) return Str8{};
@@ -159,7 +159,7 @@ export namespace base {
    * @param format Printf-style format string.
    * @param ... Format arguments.
    * @return Formatted string view, excluding trailing null terminator.
-    * @post Returned memory is owned by \p arena.
+   * @post Returned memory is owned by \p arena.
    */
   Str8 str8_pushf(Arena* arena, const char* format, ...) {
     va_list args;
@@ -183,7 +183,7 @@ export namespace base {
     vsnprintf(reinterpret_cast<char*>(buffer), safe_len + 1, format, args);
     va_end(args);
 
-    // Return the view tracking the explicit characters, ommitting the
+    // Return the view tracking the explicit characters, omitting the
     // trailing null byte
     return Str8(buffer, safe_len);
   }
@@ -206,7 +206,7 @@ export namespace base {
    * @brief Computes the 64-bit FNV-1a hash of a string view.
    * @param string Input string view.
    * @return 64-bit hash value.
-    * @note Hash is stable for identical byte sequences.
+   * @note Hash is stable for identical byte sequences.
    */
   constexpr base::u64 str8_hash_fnv1a(Str8 string) {
     base::u64 hash = 14695981039346656037ULL;
