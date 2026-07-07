@@ -6,7 +6,7 @@ export module core_lexer;
 
 import core_types;
 import core_string;
-import core_result_s;
+import core_result;
 import core_text_parse;
 
 export namespace base {
@@ -17,6 +17,18 @@ export namespace base {
    *
    * This module keeps all lexical state in small POD-style structs and raw
    * `Str8` slices so higher layers can compose fast, data-oriented scanners.
+   *
+   * @par Error Accumulation Contract (Language Server Oriented)
+   * The lexer layer is designed for whole-buffer parsing with recovery and
+   * diagnostic accumulation:
+   * - Cursor progress rule: a top-level lex step must either emit a token or
+   *   advance by at least one byte.
+   * - No silent consumed failure: if a routine consumes a candidate window and
+   *   fails validation, that failure must be surfaced to the coordinator layer.
+   * - Strict parsing remains delegated to text-parse helpers; cursor methods own
+   *   navigation and consumed-window boundaries.
+   * - Recovery behavior is intentional: some consume paths advance on failure to
+   *   support forward progress in multi-error pipelines.
    */
 
   /**
@@ -74,6 +86,30 @@ export namespace base {
     /** @brief Token classification for dispatch. */
     TokenType type;
   };
+
+  /**
+   * @brief Build a sentinel "no diagnostic emitted" record at one offset.
+   */
+  constexpr ParseDiagnostic make_no_diag(u64 offset) {
+    return ParseDiagnostic{
+      ParseDiagCode::None,
+      DiagnosticSeverity::Note,
+      offset,
+      offset
+    };
+  }
+
+  /**
+   * @brief Build an error diagnostic over a consumed source window. 
+   */
+  constexpr ParseDiagnostic make_error_diag(ParseDiagCode code, u64 start_offset, u64 end_offset) {
+    return ParseDiagnostic{
+      code,
+      DiagnosticSeverity::Error,
+      start_offset,
+      end_offset
+    };
+  } 
 
   /**
    * @ingroup LexerCore
@@ -187,14 +223,14 @@ export namespace base {
      * @return `ok(length)` when a closing quote is found, where `length`
      *         includes both delimiters; otherwise `err(...)` on EOF.
      */
-    constexpr ResultS<u64> parse_string_literal() {
+    constexpr ParseResult<u64> parse_string_literal() {
       u64 start = this->offset;
       advance();  // advance past opening quote
       while (!is_eof()) {
         u8 c = peek();
         if (c == '"') {
           advance();  // consume closing quote
-          return ResultS<u64>::ok(this->offset - start);
+          return ParseResult<u64>::ok(this->offset - start);
         }
         if (c == '\\') {
           // blind skip - bypass the backslash and the escaped character
@@ -203,7 +239,7 @@ export namespace base {
           advance(1);
         }
       }
-      return ResultS<u64>::err("Unterminated string literal EOF");
+      return ParseResult<u64>::err(ParseDiagCode::UnterminatedString);
     }
 
     /**
@@ -220,10 +256,10 @@ export namespace base {
      *   This is intentional for forward progress and error-accumulation workflows.
      *
      * @tparam T Integer output type.
-     * @param parser Strict parser callback (`ResultS<T> (*)(Str8)`).
+     * @param parser Strict parser callback (`ParseResult<T> (*)(Str8)`).
      */
     template <typename T>
-    constexpr ResultS<T> consume_int_impl(ResultS<T> (*parser)(Str8)) {
+    constexpr ParseResult<T> consume_int_impl(ParseResult<T> (*parser)(Str8)) {
       u64 start = this->offset;
       u64 scan = start;
 
@@ -239,12 +275,27 @@ export namespace base {
       }
 
       if (scan == digits_start) {
-        return ResultS<T>::err("No digits found");
+        return ParseResult<T>::err(ParseDiagCode::NoDigits);
       }
 
       this->offset = scan;
       Str8 consumed{this->input.str + start, scan - start};
       return parser(consumed);
+    }
+
+    template<typename T>
+    constexpr ParseResult<T> consume_int_with_diag(ParseResult<T> (*parser)(Str8), ParseDiagnostic* out_diag) {
+      u64 start = this->offset;
+      if (out_diag != nullptr) {
+        *out_diag = make_no_diag(start);
+      }
+
+      ParseResult<T> res = consume_int_impl<T>(parser);
+
+      if (!res.is_ok() && out_diag != nullptr && this->offset > start) {
+        *out_diag = make_error_diag(res.error, start, this->offset);
+      }
+      return res;
     }
 
     /**
@@ -253,44 +304,55 @@ export namespace base {
      * This method performs prefix window discovery and delegates numeric
      * validation/range checks to strict `parse_u8`.
      */
-    constexpr ResultS<u8> consume_u8() {
+    constexpr ParseResult<u8> consume_u8() {
       return consume_int_impl<u8>(parse_u8);
     }
 
     /**
      * @brief Consume `[+|-]?[0-9]+` and parse as `i8`.
      */
-    constexpr ResultS<i8> consume_i8() {
+    constexpr ParseResult<i8> consume_i8() {
       return consume_int_impl<i8>(parse_i8);
     }
 
     /** @brief Consume `[0-9]+` and parse as `u16`. */
-    constexpr ResultS<u16> consume_u16() {
+    constexpr ParseResult<u16> consume_u16() {
       return consume_int_impl<u16>(parse_u16);
     }
 
     /** @brief Consume `[+|-]?[0-9]+` and parse as `i16`. */
-    constexpr ResultS<i16> consume_i16() {
+    constexpr ParseResult<i16> consume_i16() {
       return consume_int_impl<i16>(parse_i16);
     }
 
     /** @brief Consume `[0-9]+` and parse as `u32`. */
-    constexpr ResultS<u32> consume_u32() {
+    constexpr ParseResult<u32> consume_u32() {
       return consume_int_impl<u32>(parse_u32);
     }
 
     /** @brief Consume `[+|-]?[0-9]+` and parse as `i32`. */
-    constexpr ResultS<i32> consume_i32() {
+    constexpr ParseResult<i32> consume_i32() {
       return consume_int_impl<i32>(parse_i32);
     }
 
+    /** @brief Consume [0-9]+ as u32 and emit diagnostic on consumed strict failure. */
+    constexpr ParseResult<u32> consume_u32_with_diag(ParseDiagnostic* out_diag) {
+      return consume_int_with_diag<u32>(parse_u32, out_diag);
+    }
+
+    /** @brief Consume [0-9]+ as u32 and emit diagnostic on consumed strict failure. */
+    constexpr ParseResult<i32> consume_i32_with_diag(ParseDiagnostic* out_diag) {
+      return consume_int_with_diag<i32>(parse_i32, out_diag);
+    }
+
+
     /** @brief Consume `[0-9]+` and parse as `u64`. */
-    constexpr ResultS<u64> consume_u64() {
+    constexpr ParseResult<u64> consume_u64() {
       return consume_int_impl<u64>(parse_u64);
     }
 
     /** @brief Consume `[+|-]?[0-9]+` and parse as `i64`. */
-    constexpr ResultS<i64> consume_i64() {
+    constexpr ParseResult<i64> consume_i64() {
       return consume_int_impl<i64>(parse_i64);
     }
 
@@ -307,7 +369,7 @@ export namespace base {
      * This behavior is intentional for recovery-friendly, whole-buffer parsing
      * pipelines such as language-server style error accumulation.
      */
-    constexpr ResultS<f64> consume_f64() {
+    constexpr ParseResult<f64> consume_f64() {
       u64 start = this->offset;
       u64 scan = start;
 
@@ -330,7 +392,7 @@ export namespace base {
       }
 
       if (!has_digits) {
-        return ResultS<f64>::err("No valid digits");
+        return ParseResult<f64>::err(ParseDiagCode::NoDigits);
       }
 
       if (scan < this->input.len && (this->input.str[scan] == 'e' || this->input.str[scan] == 'E')) {
@@ -343,7 +405,7 @@ export namespace base {
           exp_scan++;
         }
         if (exp_scan == exp_digits_start) {
-          return ResultS<f64>::err("Invalid exponent");
+          return ParseResult<f64>::err(ParseDiagCode::InvalidExponent);
         }
         scan = exp_scan;
       }
@@ -353,15 +415,34 @@ export namespace base {
       return parse_f64(consumed);
     }
 
-    /** @brief Consume and parse an `f32` prefix via `consume_f64`. */
-    constexpr ResultS<f32> consume_f32() {
-      auto res = consume_f64();
-      if (!res.is_ok()) {
-        return ResultS<f32>::err(res.error);
+    /**
+     * @brief Consume f64 and emit diagnostics on consumed strict failure.
+     *
+     * Prefix miss (no consumed bytes) returns error without diagnostic emission.
+     */
+    constexpr ParseResult<f64> consume_f64_with_diag(ParseDiagnostic* out_diag) {
+      u64 start = this->offset;
+      if (out_diag != nullptr) {
+        *out_diag = make_no_diag(start);
       }
-      return ResultS<f32>::ok(static_cast<f32>(res.value));
+
+      ParseResult<f64> res = consume_f64();
+
+      if (!res.is_ok() && out_diag != nullptr && this->offset > start) {
+        *out_diag = make_error_diag(res.error, start, this->offset);
+      }
+
+      return res;
     }
 
+    /** @brief Consume and parse an `f32` prefix via `consume_f64`. */
+    constexpr ParseResult<f32> consume_f32() {
+      auto res = consume_f64();
+      if (!res.is_ok()) {
+        return ParseResult<f32>::err(res.error);
+      }
+      return ParseResult<f32>::ok(static_cast<f32>(res.value));
+    }
 
   };    // struct Str8Cursor
 

@@ -6,7 +6,7 @@ module;
 export module core_text_parse;
 
 import core_types;
-import core_result_s;
+import core_result;
 import core_string;
 
 export namespace base {
@@ -32,10 +32,15 @@ export namespace base {
    * and keeps ownership boundaries explicit: parser utilities only classify and
    * slice, while downstream systems decide allocation policy and lifetime.
    *
-   * @par Downstream Implementation Guide
-   * When your AST module requires the clean, resolved bytes of a string, you
-   * should implement an allocation bridge using your Arena. Feel free to copy
-   * and paste the following implementation into your AST builder:
+   * @par Data-oriented separation
+   * This routine is intentionally pure "math" logic and does not touch cursor
+   * state. Cursor movement belongs in lexer `consume_*` style functions.
+   *
+   * @par Coordinator contract
+   * These strict parsers validate only the provided slice and return success or
+   * failure for that slice. They do not perform recovery, cursor rewinds, or
+   * diagnostic list mutation. In language-server style workflows, a coordinator
+   * layer is responsible for aggregating diagnostics and selecting recovery steps.
    *
    * @code
    * // Inside my_language_ast.cppm (or similar)
@@ -87,6 +92,50 @@ export namespace base {
     /** @brief 1-based column index. */
     u32 column;
   };
+
+  /**
+   * @brief Diagnostic severity for parser/lexer recovery workflows.
+   * 
+   */
+  enum struct DiagnosticSeverity : u8 {
+    Note = 0,
+    Warning,
+    Error
+  };
+
+  /**
+   * @brief Stable diagnostic code identifiers for text parse failures.
+   *
+   * Keep this list compact and allocator-free for code-first diagnostics.
+   * Human-readable text is a coordinator/reporting concern.
+   */
+  enum struct ParseDiagCode : u16 {
+    None = 0,
+    EmptyInput,
+    NoDigits,
+    InvalidNumericChar,
+    IntOverflow,
+    InvalidExponent,
+    ExponentOverflow,
+    TrailingChars,
+    UnterminatedString,
+    UnterminatedBlockComment
+  };
+
+  struct ParseDiagnostic {
+    ParseDiagCode code;
+    DiagnosticSeverity severity;
+    u64 start_offset;
+    u64 end_offset;
+  };
+
+  template <typename T> 
+  using ParseResult = Result<ParseDiagCode, T>;
+
+  static_assert(std::is_standard_layout_v<ParseDiagnostic>, 
+                "ParseDiagnostic must remain standard layout.");
+  static_assert(std::is_trivially_copyable_v<ParseDiagnostic>, 
+                "ParseDiagnostic must remain trivially copyable.");
 
   /**
    * @brief Compute line/column location for a byte offset.
@@ -152,8 +201,8 @@ export namespace base {
    * @return Parsed integer or error when invalid/empty/overflowing.
    */
   template <typename T>
-  constexpr ResultS<T> parse_int_impl(Str8 text) {
-    if (text.len == 0) return ResultS<T>::err("Empty string");
+  constexpr ParseResult<T> parse_int_impl(Str8 text) {
+    if (text.len == 0) return ParseResult<T>::err(ParseDiagCode::EmptyInput);
 
     u64 i = 0;
     bool is_negative = false;
@@ -168,7 +217,7 @@ export namespace base {
       }
     }
 
-    if (i == text.len) return ResultS<T>::err("No digits found");
+    if (i == text.len) return ParseResult<T>::err(ParseDiagCode::NoDigits);
 
     // Accumulate in unsigned space first; signed range checks happen once.
     using UnsignedT = std::make_unsigned_t<T>;
@@ -177,13 +226,13 @@ export namespace base {
     for (; i < text.len; ++i) {
       u8 c = text.str[i];
       if (c < '0' || c > '9') {
-        return ResultS<T>::err("Invalid numeric character");
+        return ParseResult<T>::err(ParseDiagCode::InvalidNumericChar);
       }
       UnsignedT digit = c - '0';
 
       // Pre-multiply overflow check: result * 10 + digit must stay representable.
       if (result > (std::numeric_limits<UnsignedT>::max() - digit) / 10) {
-        return ResultS<T>::err("Integer overflow");
+        return ParseResult<T>::err(ParseDiagCode::IntOverflow);
       }
       result = result * 10 + digit;
     }
@@ -196,41 +245,41 @@ export namespace base {
 
       if (is_negative) {
         if (result > max_neg_mag) {
-          return ResultS<T>::err("Integer overflow");
+          return ParseResult<T>::err(ParseDiagCode::IntOverflow);
         }
         if (result == max_neg_mag) {
-          return ResultS<T>::ok(std::numeric_limits<T>::min());
+          return ParseResult<T>::ok(std::numeric_limits<T>::min());
         }
 
         // result <= max_pos, so cast to T is representable
         T mag = static_cast<T>(result);
-        return ResultS<T>::ok(static_cast<T>(-mag));
+        return ParseResult<T>::ok(static_cast<T>(-mag));
       }
 
       if (result > max_pos) {
-        return ResultS<T>::err("Integer overflow");
+        return ParseResult<T>::err(ParseDiagCode::IntOverflow);
       }
-      return ResultS<T>::ok(static_cast<T>(result));
+      return ParseResult<T>::ok(static_cast<T>(result));
     }
-    return ResultS<T>::ok(static_cast<T>(result));
+    return ParseResult<T>::ok(static_cast<T>(result));
   }
 
   /** @brief Parse `Str8` into `u8`. */
-  constexpr ResultS<u8>  parse_u8(Str8 t)  { return parse_int_impl<u8>(t); }
+  constexpr ParseResult<u8>  parse_u8(Str8 t)  { return parse_int_impl<u8>(t); }
   /** @brief Parse `Str8` into `i8`. */
-  constexpr ResultS<i8>  parse_i8(Str8 t)  { return parse_int_impl<i8>(t); }
+  constexpr ParseResult<i8>  parse_i8(Str8 t)  { return parse_int_impl<i8>(t); }
   /** @brief Parse `Str8` into `u16`. */
-  constexpr ResultS<u16> parse_u16(Str8 t) { return parse_int_impl<u16>(t); }
+  constexpr ParseResult<u16> parse_u16(Str8 t) { return parse_int_impl<u16>(t); }
   /** @brief Parse `Str8` into `i16`. */
-  constexpr ResultS<i16> parse_i16(Str8 t) { return parse_int_impl<i16>(t); }
+  constexpr ParseResult<i16> parse_i16(Str8 t) { return parse_int_impl<i16>(t); }
   /** @brief Parse `Str8` into `u32`. */
-  constexpr ResultS<u32> parse_u32(Str8 t) { return parse_int_impl<u32>(t); }
+  constexpr ParseResult<u32> parse_u32(Str8 t) { return parse_int_impl<u32>(t); }
   /** @brief Parse `Str8` into `i32`. */
-  constexpr ResultS<i32> parse_i32(Str8 t) { return parse_int_impl<i32>(t); }
+  constexpr ParseResult<i32> parse_i32(Str8 t) { return parse_int_impl<i32>(t); }
   /** @brief Parse `Str8` into `u64`. */
-  constexpr ResultS<u64> parse_u64(Str8 t) { return parse_int_impl<u64>(t); }
+  constexpr ParseResult<u64> parse_u64(Str8 t) { return parse_int_impl<u64>(t); }
   /** @brief Parse `Str8` into `i64`. */
-  constexpr ResultS<i64> parse_i64(Str8 t) { return parse_int_impl<i64>(t); }  
+  constexpr ParseResult<i64> parse_i64(Str8 t) { return parse_int_impl<i64>(t); }  
 
 
   //-------------------------------------------------------------
@@ -246,10 +295,12 @@ export namespace base {
    * @return Parsed `f64` on full-slice success; otherwise an error for empty
    *         input, invalid exponent, exponent overflow, trailing characters,
    *         or missing digits.
+   * @note This function is strict over the passed slice only. Error accumulation
+   *       and continued parsing across a full buffer are coordinator-layer tasks.
    */
-  constexpr ResultS<f64> parse_f64(Str8 text) {
+  constexpr ParseResult<f64> parse_f64(Str8 text) {
     if (text.len == 0) {
-      return ResultS<f64>::err("Empty string");
+      return ParseResult<f64>::err(ParseDiagCode::EmptyInput);
     }
 
     u64 i = 0;
@@ -285,7 +336,7 @@ export namespace base {
     }
 
     if (!found_digits) {
-      return ResultS<f64>::err("No valid digits");
+      return ParseResult<f64>::err(ParseDiagCode::NoDigits);
     }
 
     // Exponent part (for example, e-4)
@@ -307,14 +358,14 @@ export namespace base {
       while (i < text.len && text.str[i] >= '0' && text.str[i] <= '9') {
         u32 digit = static_cast<u32>(text.str[i] - '0');
         if (exp_val > (std::numeric_limits<u32>::max() - digit) / 10) {
-          return ResultS<f64>::err("Exponent overflow");
+          return ParseResult<f64>::err(ParseDiagCode::ExponentOverflow);
         }
         exp_val = exp_val * 10 + (text.str[i] - '0');
         i++;
       }
 
       if (i == exp_digits_start) {
-        return ResultS<f64>::err("Invalid exponent");
+        return ParseResult<f64>::err(ParseDiagCode::InvalidExponent);
       }
 
       // Compute 10^e using binary exponentiation.
@@ -342,10 +393,10 @@ export namespace base {
     }
 
     if (i != text.len) {
-      return ResultS<f64>::err("Trailing characters");
+      return ParseResult<f64>::err(ParseDiagCode::TrailingChars);
     }
 
-    return ResultS<f64>::ok(is_negative ? -result : result);
+    return ParseResult<f64>::ok(is_negative ? -result : result);
   }
 
   /**
@@ -353,12 +404,12 @@ export namespace base {
    * @param text Input byte slice.
    * @return Parsed `f32` or forwarded parse error.
    */
-  constexpr ResultS<f32> parse_f32(Str8 text) {
+  constexpr ParseResult<f32> parse_f32(Str8 text) {
     auto res = parse_f64(text);
     if (!res.is_ok()) {
-      return ResultS<f32>::err(res.error);
+      return ParseResult<f32>::err(res.error);
     }
-    return ResultS<f32>::ok(static_cast<f32>(res.value));
+    return ParseResult<f32>::ok(static_cast<f32>(res.value));
   }
 
 }

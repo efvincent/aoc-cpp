@@ -23,6 +23,57 @@ We treat C++ strictly as a **"Better C Compiler."** We purposefully reject compl
 2. **C++ Templates:** Allowed for zero-cost generic utilities where they reduce duplication without hiding control flow (for example, parser helpers, cursor consume helpers, or type-generic containers). Deep compile-time recursive metaprogramming tricks are rejected.
 3. **Struct-Scoped Methods:** Used solely for syntactic convenience and low-overhead modular ergonomics without object-oriented state dispatch.
 
+  
+### Error Accumulation Contract (Lexer/Parser Split)
+
+For language-server scenarios, the project follows an explicit two-layer contract:
+
+1. **Lexer / Cursor Layer (`core_lexer`)**
+- Owns byte navigation, token boundaries, trivia skipping, and recovery-oriented movement.
+- A top-level lex step must either emit a token or advance at least one byte.
+- Consumed-window failures must be reportable to the coordinator (no silent consumed failures).
+
+2. **Strict Parse Layer (`core_text_parse`)**
+- Owns pure slice validation and conversion (`Str8 -> ParseResult<T>` with `ParseDiagCode` on error).
+- Must not own cursor movement, rewind policy, or diagnostic list accumulation.
+
+3. **Coordinator Layer (future parser/LS integration)**
+- Owns diagnostic aggregation, severity classification, and multi-error recovery policy.
+- Converts byte offsets to user-facing locations and decides how to continue after failures.
+4. **Diagnostic Record Contract (`ParseDiagnostic`)**
+- Diagnostics must be representable as POD records with byte spans into the original source.
+- The base layer keeps diagnostics allocation-free (`code`, `severity`, `start_offset`, `end_offset`).
+- Coordinator owns storage policy (arena/list/vector-equivalent in project style), de-duplication, and presentation formatting.
+
+`ParseDiagnostic` is intentionally a low-level transport shape, not a presentation object.
+
+Field semantics:
+- `code`: stable machine-readable failure identifier (`ParseDiagCode`).
+- `severity`: classifier (`Note`, `Warning`, `Error`) chosen by base defaults or coordinator policy.
+- `start_offset`: inclusive byte offset in the original source buffer.
+- `end_offset`: exclusive byte offset in the original source buffer.
+
+Message policy:
+- Base parser/lexer diagnostics are code-first and do not carry message payloads.
+- Human-readable strings are generated later by coordinator/reporting layers from `ParseDiagCode`.
+
+Step 3 wrapper policy:
+- Recovery-oriented `consume_*_with_diag` wrappers emit diagnostics only when a candidate window was consumed and strict validation failed.
+- Prefix-miss failures (no consumed bytes) return errors without emitting diagnostics, so callers can choose alternate token paths.
+
+Current `ParseDiagCode` baseline:
+- `None`
+- `EmptyInput`
+- `NoDigits`
+- `InvalidNumericChar`
+- `IntOverflow`
+- `InvalidExponent`
+- `ExponentOverflow`
+- `TrailingChars`
+- `UnterminatedString`
+- `UnterminatedBlockComment`
+
+Coordinator rule: convert offsets to line/column only at reporting boundaries. Keep base parsing and lexing logic offset-native for hot-path simplicity.
 ---
 
 ## 2. Structural Memory Management (The Arena Ecosystem)
