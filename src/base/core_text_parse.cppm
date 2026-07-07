@@ -301,6 +301,10 @@ export namespace base {
       u64 exp_digits_start = i;
       u32 exp_val = 0;
       while (i < text.len && text.str[i] >= '0' && text.str[i] <= '9') {
+        u32 digit = static_cast<u32>(text.str[i] - '0');
+        if (exp_val > (std::numeric_limits<u32>::max() - digit) / 10) {
+          return ResultS<f64>::err("Exponent overflow");
+        }
         exp_val = exp_val * 10 + (text.str[i] - '0');
         i++;
       }
@@ -323,6 +327,7 @@ export namespace base {
     if (i != text.len) {
       return ResultS<f64>::err("Trailing characters");
     }
+
     return ResultS<f64>::ok(is_negative ? -result : result);
   }
 
