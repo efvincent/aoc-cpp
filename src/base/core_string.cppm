@@ -166,7 +166,7 @@ export namespace base {
 
     // Query exact space required by running a dry run
     va_start(args,format);
-    u32 formal_len = vsnprintf(nullptr, 0, format, args);
+    i32 formal_len = vsnprintf(nullptr, 0, format, args);
     va_end(args);
 
     if (formal_len <= 0) return Str8{};
