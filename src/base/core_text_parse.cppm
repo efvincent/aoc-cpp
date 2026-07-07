@@ -188,21 +188,31 @@ export namespace base {
       result = result * 10 + digit;
     }
 
-    // Final sign application and target-range validation.
-    if constexpr(static_cast<T>(-1) < 0) {
-      // Negative path allows one extra magnitude unit for T::min().
-      UnsignedT max_abs = is_negative
-        ? static_cast<UnsignedT>(-(std::numeric_limits<T>::min() + 1)) + 1
-        : static_cast<UnsignedT>(std::numeric_limits<T>::max());
-      if (result > max_abs) {
+    // Final sign application and target-range validation
+    // Portability safe path: never cast an out-of-range unsigned magnitude to signed.
+    if constexpr (static_cast<T>(-1) < 0) {
+      const UnsignedT max_pos = static_cast<UnsignedT>(std::numeric_limits<T>::max());
+      const UnsignedT max_neg_mag = max_pos + 1;  // |T::min()|
+
+      if (is_negative) {
+        if (result > max_neg_mag) {
+          return ResultS<T>::err("Integer overflow");
+        }
+        if (result == max_neg_mag) {
+          return ResultS<T>::ok(std::numeric_limits<T>::min());
+        }
+
+        // result <= max_pos, so cast to T is representable
+        T mag = static_cast<T>(result);
+        return ResultS<T>::ok(static_cast<T>(-mag));
+      }
+
+      if (result > max_pos) {
         return ResultS<T>::err("Integer overflow");
       }
-      return ResultS<T>::ok(is_negative 
-        ? -static_cast<T>(result)
-        : static_cast<T>(result));
-    } else {
       return ResultS<T>::ok(static_cast<T>(result));
     }
+    return ResultS<T>::ok(static_cast<T>(result));
   }
 
   /** @brief Parse `Str8` into `u8`. */
@@ -277,6 +287,7 @@ export namespace base {
     }
 
     // Exponent part (e.g., e-4)
+    // Strict rule: at least one digit is required after e, e+, or e-.
     if (i < text.len && (text.str[i] == 'e' || text.str[i] == 'E')) {
       i++;
       bool exp_negative = false;
@@ -287,10 +298,15 @@ export namespace base {
         i++;
       }
 
+      u64 exp_digits_start = i;
       u32 exp_val = 0;
       while (i < text.len && text.str[i] >= '0' && text.str[i] <= '9') {
         exp_val = exp_val * 10 + (text.str[i] - '0');
         i++;
+      }
+
+      if (i == exp_digits_start) {
+        return ResultS<f64>::err("Invalid exponent");
       }
 
       f64 p = 1.0;
@@ -304,6 +320,9 @@ export namespace base {
       }
     }
 
+    if (i != text.len) {
+      return ResultS<f64>::err("Trailing characters");
+    }
     return ResultS<f64>::ok(is_negative ? -result : result);
   }
 

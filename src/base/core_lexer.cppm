@@ -88,7 +88,7 @@ export namespace base {
     /** @brief Current byte offset in `input`. */
     u64 offset;
 
-    // -- Core primatives --
+    // -- Core primitives --
 
     /**
      * @brief Read current or lookahead byte without advancing.
@@ -156,6 +156,11 @@ export namespace base {
      *         at the current position.
      */
     constexpr Str8 parse_ident() {
+      // Guard against null-base pointer arithmetic for empty/null input slices
+      if (this->input.str == nullptr || this->input.len == 0) {
+        return Str8(nullptr, 0);
+      }
+      
       u64 start = this->offset;
       u8 first = peek();
 

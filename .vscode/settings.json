@@ -1,6 +1,7 @@
 {
   "chat.tools.terminal.autoApprove": {
-    "make": true
+    "make": true,
+    "git remote": true
   },
   "files.associations": {
     "*.cppm": "cpp"
