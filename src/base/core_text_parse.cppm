@@ -286,8 +286,10 @@ export namespace base {
       return ResultS<f64>::err("No valid digits");
     }
 
-    // Exponent part (e.g., e-4)
+    // Exponent part (for example, e-4)
     // Strict rule: at least one digit is required after e, e+, or e-.
+    // Performance rule: 10^exp is computed with exponentiation by squaring
+    // to keep multiplication cost logarithmic in the exponent size.
     if (i < text.len && (text.str[i] == 'e' || text.str[i] == 'E')) {
       i++;
       bool exp_negative = false;
@@ -313,10 +315,23 @@ export namespace base {
         return ResultS<f64>::err("Invalid exponent");
       }
 
-      f64 p = 1.0;
-      for (u32 e = 0; e < exp_val; ++e) {
-        p *= 10.0;
-      }
+      // Compute 10^e using binary exponentiation.
+      // Invariant during loop: out * base^(remaining e) == 10^(original e).
+      // Complexity: O(log e) multiplications instead of O(e).
+      auto pow10 = [](u32 e) constexpr -> f64 {
+        f64 base = 10.0;
+        f64 out = 1.0;
+        while (e > 0) {
+          if (e & 1u) {
+            out *= base;
+          }
+          base *= base;
+          e >>= 1u;
+        }
+        return out;
+      };
+
+      f64 p = pow10(exp_val);
       if (exp_negative) {
         result /= p;
       } else {
