@@ -70,6 +70,7 @@ export namespace base {
 
       this->buffer = reinterpret_cast<u8*>(ptr);
       this->capacity = total_capacity;
+      this->offset = 0;
       return true;
     }
 

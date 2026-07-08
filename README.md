@@ -7,7 +7,6 @@
 - `clang++` with C++23 modules support
 - `make`
 - `doxygen` for API docs
-- `bear` if you want to regenerate `compile_commands.json`
 
 ## Layout
 
@@ -47,6 +46,8 @@ make bear
 
 This target rebuilds the project with Clang's native `-MJ` compilation database
 fragments so C++23 module interface units are included correctly.
+
+No external `bear` binary is required for this workflow.
 
 Generate Doxygen output with the checked-in config:
 
