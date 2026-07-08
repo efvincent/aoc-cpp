@@ -62,6 +62,7 @@ Coordinator wrapper policy:
 - Core lexer primitives in `core_lexer` stay side-effect-free with respect to diagnostic storage.
 - Diagnostics are emitted only when a candidate window was consumed and strict validation failed.
 - Prefix-miss failures (no consumed bytes) return errors without diagnostic emission so callers can choose alternate token paths.
+- For float consumption, an exponent marker (`e`/`E`) without exponent digits is treated as a token boundary (left for subsequent tokenization), not as a consumed failure.
 
 Intended usage split:
 - Use `core_lexer` + `core_text_parse` directly for lean parsing paths (for example, AoC puzzle solutions) where caller only needs typed parse success/error and cursor movement.

@@ -369,10 +369,12 @@ export namespace base {
         while (exp_scan < this->input.len && is_numeric(this->input.str[exp_scan])) {
           exp_scan++;
         }
-        if (exp_scan == exp_digits_start) {
-          return ParseResult<f64>::err(ParseDiagCode::InvalidExponent);
+
+        // If exponent marker has no digits, do not consume it here.
+        // Leave 'e'/'E' for subsequent tokenization and consume mantissa only.
+        if (exp_scan != exp_digits_start) {
+          scan = exp_scan;
         }
-        scan = exp_scan;
       }
 
       this->offset = scan;

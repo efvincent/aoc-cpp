@@ -198,10 +198,27 @@ export namespace base {
   static_assert(std::is_trivially_copyable_v<ParseDiagnostic>, 
                 "ParseDiagnostic must remain trivially copyable.");
 
+  constexpr SourceLocation compute_location(Str8 buffer, u64 offset) {
+    u32 line = 1;
+    u32 col = 1;
+    u64 limit = base::Min(offset, buffer.len);
+    
+    for (u64 i = 0; i < limit; ++i) {
+      if (buffer.str[i] == '\n') {
+        line++;
+        col = 1;
+      } else {
+        col++;
+      }
+    }
+    return {line,col};
+  }
+
   /**
-   * @brief Compute line/column location for a byte offset.
-   * @param buffer Full source buffer.
-   * @param offset Byte offset into `buffer`.
+   * @brief Compute line/column location from a precomputed line index.
+   * @param index Precomputed line-start index.
+   * @param buffer_len Source buffer length used for clamping.
+   * @param offset Byte offset into source data.
    * @return 1-based line/column location clamped at end-of-buffer.
    */
   constexpr SourceLocation compute_location(LineIndex index, u64 buffer_len, u64 offset) {
@@ -281,7 +298,7 @@ export namespace base {
     bool is_negative = false;
 
     // compile time branch: check sign handling only if type is signed
-    if constexpr(static_cast<T>(-1) < 0) {
+    if (std::is_signed_v<T>) {
       if (text.str[0] == '-') {
         is_negative = true;
         i++;
@@ -312,7 +329,7 @@ export namespace base {
 
     // Final sign application and target-range validation
     // Portability safe path: never cast an out-of-range unsigned magnitude to signed.
-    if constexpr (static_cast<T>(-1) < 0) {
+    if constexpr (std::is_signed_v<T>) {
       const UnsignedT max_pos = static_cast<UnsignedT>(std::numeric_limits<T>::max());
       const UnsignedT max_neg_mag = max_pos + 1;  // |T::min()|
 
