@@ -94,6 +94,67 @@ export namespace base {
   };
 
   /**
+   * @brief Precomputed line-start offsets for O(log N) location lookup.
+   *
+   * `line_starts[i]` stores the byte offset for 1-based line `i+1`.
+   */
+  struct LineIndex {
+    /** @brief Pointer to caller-owned line-start offset storage. */
+    const u64* line_starts;
+    /** @brief Number of entries in @ref line_starts. */
+    u32 line_count;
+  };
+
+
+  /**
+   * @brief Compute required entry count for a line-start index.
+   *
+   * Always returns at least 1 (line 1 at offset 0).
+   */
+  constexpr u32 line_index_required_capacity(Str8 buffer) {
+    u32 lines = 1;
+    for(u64 i = 0; i < buffer.len; ++i) {
+      if (buffer.str[i] == '\n') {
+        lines++;
+      }
+    }
+    return lines;
+  }
+
+  /**
+   * @brief Build a line-start index into caller-provided storage.
+   *
+   * @param buffer Source buffer.
+   * @param out_line_starts Destination storage for line starts.
+   * @param capacity Number of writable entries in @p out_line_starts.
+   * @param out_index Receives the built index view.
+   * @return True on success, false for invalid args or insufficient capacity.
+   */
+  constexpr bool line_index_build(Str8 buffer, u64* out_line_starts, u32 capacity, LineIndex* out_index) {
+    if (out_line_starts == nullptr || out_index == nullptr || capacity == 0) {
+      return false;
+    }
+
+    u32 needed = line_index_required_capacity(buffer);
+    if (capacity < needed) {
+      return false;
+    }
+
+    u32 write = 0;
+    out_line_starts[write++] = 0;   // line 1 always starts at offset 0
+
+    for (u64 i = 0; i < buffer.len; ++i) {
+      if (buffer.str[i] == '\n') {
+        out_line_starts[write++] = i + 1;
+      }
+    }
+
+    out_index->line_starts = out_line_starts;
+    out_index->line_count = write;
+    return true;
+  }
+
+  /**
    * @brief Diagnostic severity for parser/lexer recovery workflows.
    * 
    */
@@ -143,21 +204,33 @@ export namespace base {
    * @param offset Byte offset into `buffer`.
    * @return 1-based line/column location clamped at end-of-buffer.
    */
-  constexpr SourceLocation compute_location(Str8 buffer, u64 offset) {
-    u32 line = 1;
-    u32 col = 1;
-    u64 limit = (offset < buffer.len) ? offset : buffer.len;
+  constexpr SourceLocation compute_location(LineIndex index, u64 buffer_len, u64 offset) {
+    if (index.line_starts == nullptr || index.line_count == 0) {
+      return {1, 1};
+    }
 
-    for (u64 i = 0; i < limit; ++i) {
-      if (buffer.str[i] == '\n') {
-        line++;
-        col = 1;
+    u64 clamped = (offset < buffer_len) ? offset : buffer_len;
+
+    // upper_bound(line_starts, clamped)
+    u32 lo = 0;
+    u32 hi = index.line_count;
+    while (lo < hi) {
+      u32 mid = lo + ((hi - lo) / 2);
+      if (index.line_starts[mid] <= clamped) {
+        lo = mid + 1;
       } else {
-        col++;
+        hi = mid;
       }
     }
-    return {line, col};
-  }
+
+    u32 line_idx = (lo == 0) ? 0 : (lo - 1);
+    u64 line_start = index.line_starts[line_idx];
+    u64 col64 = (clamped - line_start) + 1;
+    u32 column = (col64 > static_cast<u64>(std::numeric_limits<u32>::max()))
+                    ? std::numeric_limits<u32>::max()
+                    : static_cast<u32>(col64);
+    return {line_idx + 1, column};
+  } 
 
   /**
    * @brief High-performance constexpr FNV-1a hash for string lookups/keywords.

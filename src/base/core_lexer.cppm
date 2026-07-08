@@ -88,18 +88,6 @@ export namespace base {
   };
 
   /**
-   * @brief Build a sentinel "no diagnostic emitted" record at one offset.
-   */
-  constexpr ParseDiagnostic make_no_diag(u64 offset) {
-    return ParseDiagnostic{
-      ParseDiagCode::None,
-      DiagnosticSeverity::Note,
-      offset,
-      offset
-    };
-  }
-
-  /**
    * @brief Build an error diagnostic over a consumed source window. 
    */
   constexpr ParseDiagnostic make_error_diag(ParseDiagCode code, u64 start_offset, u64 end_offset) {
@@ -221,7 +209,10 @@ export namespace base {
      * traversed without decoding (zero-allocation policy).
      *
      * @return `ok(length)` when a closing quote is found, where `length`
-     *         includes both delimiters; otherwise `err(...)` on EOF.
+     *         includes both delimiters; otherwise
+     *         `err(ParseDiagCode::UnterminatedString)` on EOF.
+     * @note Diagnostic accumulation is coordinator-layer policy; see
+     *       core_lexer_coord wrappers.
      */
     constexpr ParseResult<u64> parse_string_literal() {
       u64 start = this->offset;
@@ -283,21 +274,6 @@ export namespace base {
       return parser(consumed);
     }
 
-    template<typename T>
-    constexpr ParseResult<T> consume_int_with_diag(ParseResult<T> (*parser)(Str8), ParseDiagnostic* out_diag) {
-      u64 start = this->offset;
-      if (out_diag != nullptr) {
-        *out_diag = make_no_diag(start);
-      }
-
-      ParseResult<T> res = consume_int_impl<T>(parser);
-
-      if (!res.is_ok() && out_diag != nullptr && this->offset > start) {
-        *out_diag = make_error_diag(res.error, start, this->offset);
-      }
-      return res;
-    }
-
     /**
      * @brief Consume `[0-9]+` and parse as `u8`.
      *
@@ -334,17 +310,6 @@ export namespace base {
     constexpr ParseResult<i32> consume_i32() {
       return consume_int_impl<i32>(parse_i32);
     }
-
-    /** @brief Consume [0-9]+ as u32 and emit diagnostic on consumed strict failure. */
-    constexpr ParseResult<u32> consume_u32_with_diag(ParseDiagnostic* out_diag) {
-      return consume_int_with_diag<u32>(parse_u32, out_diag);
-    }
-
-    /** @brief Consume [0-9]+ as u32 and emit diagnostic on consumed strict failure. */
-    constexpr ParseResult<i32> consume_i32_with_diag(ParseDiagnostic* out_diag) {
-      return consume_int_with_diag<i32>(parse_i32, out_diag);
-    }
-
 
     /** @brief Consume `[0-9]+` and parse as `u64`. */
     constexpr ParseResult<u64> consume_u64() {
@@ -415,26 +380,6 @@ export namespace base {
       return parse_f64(consumed);
     }
 
-    /**
-     * @brief Consume f64 and emit diagnostics on consumed strict failure.
-     *
-     * Prefix miss (no consumed bytes) returns error without diagnostic emission.
-     */
-    constexpr ParseResult<f64> consume_f64_with_diag(ParseDiagnostic* out_diag) {
-      u64 start = this->offset;
-      if (out_diag != nullptr) {
-        *out_diag = make_no_diag(start);
-      }
-
-      ParseResult<f64> res = consume_f64();
-
-      if (!res.is_ok() && out_diag != nullptr && this->offset > start) {
-        *out_diag = make_error_diag(res.error, start, this->offset);
-      }
-
-      return res;
-    }
-
     /** @brief Consume and parse an `f32` prefix via `consume_f64`. */
     constexpr ParseResult<f32> consume_f32() {
       auto res = consume_f64();
@@ -480,6 +425,9 @@ export namespace base {
 
   /**
    * @brief Skip whitespace and comments according to a trivia configuration.
+   *
+   * This primitive only performs cursor movement and does not emit diagnostics.
+   * Coordinator-layer wrappers own unterminated-comment reporting policy.
    *
    * This function advances `cursor.offset` in place and can handle nested block
    * comments when `config.nested` is enabled.
