@@ -60,7 +60,11 @@ export namespace base {
     }
 
     fseek(file, 0, SEEK_END);
-    u64 file_size = static_cast<u64>(ftell(file));
+    i64 file_size = static_cast<i64>(ftell(file));
+    if (file_size < 0) {
+      fclose(file);
+      return FileReadResult::err(FileError::ReadFailed);
+    }
     fseek(file, 0, SEEK_SET);
 
     // Empty file is a valid state, not an error
@@ -78,8 +82,8 @@ export namespace base {
     u64 bytes_read = fread(buffer, 1, file_size, file);
     fclose(file);
 
-    // Detect hard failure when no bytes were produced for a non-empty file.
-    if (bytes_read == 0 && file_size > 0) {
+    // Detect hard failure when short read.
+    if (bytes_read != file_size) {
       arena.offset -= file_size;  // reclaim memory
       return FileReadResult::err(FileError::ReadFailed);
     }

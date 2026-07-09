@@ -45,9 +45,9 @@ export namespace base {
    *
    * namespace my_language {
    *
-   *    Str8 resolve_string_literal(Arena* arena, Str8 raw_slice) {
+   *    Str8 resolve_string_literal(Arena& arena, Str8 raw_slice) {
    *        // Pre-allocate worst-case size (the original string length)
-   *        u8* dest = arena_push_array(arena, u8, raw_slice.len);
+   *        u8* dest = arena.alloc_array<u8>(raw_slice.len);
    *        u64 write_idx = 0;
    *
    *        for (u64 i = 0; i < raw_slice.len; ++i) {
@@ -101,6 +101,17 @@ export namespace base {
     u32 line_count;
   };
 
+  /**
+   * @brief Failure categories for line-index construction.
+   */
+  enum struct LineIndexError : u8 {
+    None = 0,
+    InvalidArguments,
+    InsufficientCapacity
+  };
+
+  /** @brief Result alias for building a line index */
+  using LineIndexBuildResult = Result<LineIndexError, LineIndex>;
 
   /**
    * @brief Compute required entry count for a line-start index.
@@ -123,19 +134,19 @@ export namespace base {
    * @param buffer Source buffer.
    * @param out_line_starts Destination storage for line starts.
    * @param capacity Number of writable entries in @p out_line_starts.
-   * @param out_index Receives the built index view.
-   * @return True on success, false for invalid args or insufficient capacity.
+   * @return Ok(LineIndex) on success, or Err(LineIndexError) for invalid arguments
+   *         or insufficient capacity.
    */
-  constexpr bool line_index_build(Str8 buffer, u64* out_line_starts, u32 capacity, LineIndex* out_index) {
-    if (out_line_starts == nullptr || out_index == nullptr || capacity == 0) {
-      return false;
+  constexpr LineIndexBuildResult line_index_build(Str8 buffer, u64* out_line_starts, u32 capacity) {
+    if (out_line_starts == nullptr || capacity == 0) {
+      return LineIndexBuildResult::err(LineIndexError::InvalidArguments);
     }
 
     u32 needed = line_index_required_capacity(buffer);
     if (capacity < needed) {
-      return false;
+      return LineIndexBuildResult::err(LineIndexError::InsufficientCapacity);
     }
-
+    
     u32 write = 0;
     out_line_starts[write++] = 0;   // line 1 always starts at offset 0
 
@@ -145,9 +156,7 @@ export namespace base {
       }
     }
 
-    out_index->line_starts = out_line_starts;
-    out_index->line_count = write;
-    return true;
+    return LineIndexBuildResult::ok(LineIndex{out_line_starts, write});
   }
 
   /**

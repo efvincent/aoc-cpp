@@ -1,4 +1,9 @@
-#include <stdio.h>
+/**
+ * @file main.cpp
+ * @brief Temporary Advent of Code worker entry point and smoke-test harness.
+ */
+
+#include <inttypes.h>
 
 /**
  * @file main.cpp
@@ -19,12 +24,13 @@ using namespace base;
  * @param raw Input byte slice.
  * @return Accumulated result for the current placeholder implementation.
  */
-u64 part1(Str8 raw) {
-  u64 i = 0;
-  while (i < raw.len) {
-    i += raw.str[i] == '(' ? 1 : -1;
+i64 part1(Str8 raw) {
+  i64 floor = 0;
+
+  for (u64 i = 0; i < raw.len; ++i) {
+    floor += (raw.str[i] == '(') ? 1 : -1;
   }
-  return i;
+  return floor;
 }
 
 /**
@@ -34,18 +40,30 @@ u64 part1(Str8 raw) {
 int main() {
   Arena arena = Arena();
   if (!arena.init(MB(1))) {
-    fprintf(stderr, "Failed to allocate arena memory.\n");
+    print_err(Str8("failed to allocate arena memory."));
     return 1;
   }
 
+  int exit_code = 0;
+
   auto file_result = file_read_all(arena, "./data/2015/day02.txt");
   if (file_result.is_ok()) {
-    Str8 msg = Str8("File contents:\n");
-    printl(msg);
-    printl(file_result.value);
-  } else {
+    i64 answer = part1(file_result.value);
 
+    // Exercise Result-based formatting path and handle failures explicitly.
+    auto fmt_result = str8_push_cap(arena, 128, "part1 floor: %" PRId64, answer);
+
+    if (!fmt_result.is_ok()) {
+      print_err(Str8("failed to format output"));
+      exit_code = 1;
+    } else {
+      printl(fmt_result.value);
+    }
+  } else {
+    print_err(Str8("could not read input file"));
+    exit_code = 1;
   }
+
   arena.free();
-  return 0;
+  return exit_code;
 }

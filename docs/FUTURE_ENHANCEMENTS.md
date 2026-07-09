@@ -22,7 +22,7 @@ If the project should run on Windows, broader Unix targets, or additional compil
 
 ### Proposed milestones
 
-1. Introduce a VM backend interface in core memory:
+1. Extend VM backends under core_vm:
 - Reserve/commit/decommit/release (or map/unmap initially).
 - Linux backend first (existing behavior).
 - Windows backend next (`VirtualAlloc` and `VirtualFree`).
@@ -107,6 +107,35 @@ Current direction:
 - Main executable uses one shared CLI parser path.
 - New tools can register options with minimal boilerplate.
 - CLI behavior is covered by unit tests.
+
+## 3.5 String Formatting API Strategy
+
+### Goals
+
+- Keep formatting allocation behavior explicit for arena-backed code.
+- Provide a predictable correctness-first path and an optional performance path.
+- Avoid sentinel return values by preserving `Result<E,T>` semantics.
+
+### Planned API split
+
+1. Exact formatting path (two-pass):
+- `str8_pushf(...)` remains the exact-size formatter.
+- Performs a sizing pass and then a write pass.
+- Returns `Result<StringFormatError, Str8>`.
+- Prioritizes correctness and precise allocation footprint.
+
+2. Capped formatting path (single-pass):
+- Add a capped formatter variant (for example `str8_pushf_cap(...)`).
+- Caller provides maximum output capacity.
+- Performs one formatting pass into `cap + 1` bytes.
+- Returns explicit truncation/failure via `StringFormatError`.
+- Prioritizes throughput in hot paths with known practical bounds.
+
+### Success criteria
+
+- Both formatting modes are available with clear caller intent.
+- No formatting API relies on ambiguous empty-string sentinels for failure.
+- Arena offsets are restored on formatting failure/truncation paths.
 
 ## 4. Huge File Streaming Support
 
