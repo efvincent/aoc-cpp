@@ -35,11 +35,18 @@ export namespace base {
    */
   inline void* vm_alloc(u64 bytes) noexcept {
     #if defined(__linux__)
-    void* ptr = mmap(nullptr, bytes,
-                      PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE,
-                      -1, 0);
-    return (ptr == MAP_FAILED) ? nullptr : ptr;
+    
+      int map_flags = MAP_PRIVATE | MAP_ANONYMOUS;
+      
+      #if defined(MAP_POPULATE)
+      
+        map_flags |= MAP_POPULATE;
+      
+      #endif
+      
+      void* ptr = mmap(nullptr, bytes, PROT_READ | PROT_WRITE, map_flags, -1, 0);
+      return (ptr == MAP_FAILED) ? nullptr : ptr;
+    
     #endif
   }
 
