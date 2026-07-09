@@ -38,7 +38,7 @@ export namespace base::lex {
    */
   struct DiagBuffer {
     /** @brief Destination storage for diagnostics. */
-    ParseDiagnostic* data;
+    base::parse::ParseDiagnostic* data;
     /** @brief Number of populated entries in @ref data. */
     u32 count;
     /** @brief Maximum writable entries in @ref data. */
@@ -52,7 +52,7 @@ export namespace base::lex {
    * @return Ok(new_count) when the diagnostic is appended, or Err(DiagBufferError)
    *         when storage is null or capacity is exhausted.
    */
-  constexpr DiagBufferPushResult diag_buffer_push(DiagBuffer& buffer, ParseDiagnostic diag) {
+  constexpr DiagBufferPushResult diag_buffer_push(DiagBuffer& buffer, base::parse::ParseDiagnostic diag) {
     if (buffer.data == nullptr) {
       return DiagBufferPushResult::err(DiagBufferError::NullStorage);
     }
@@ -84,7 +84,7 @@ export namespace base::lex {
     u64 start = cursor.offset;
     ParseResult<T> res = cursor.consume_int_impl<T>(parser);
     if (!res.is_ok() && cursor.offset > start) {
-      ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
+      base::parse::ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
       (void)diag_buffer_push(diags, diag);
     }
     return res;
@@ -139,7 +139,7 @@ export namespace base::lex {
     u64 start = cursor.offset;
     ParseResult<f64> res = cursor.consume_f64();
     if (!res.is_ok() && cursor.offset > start) {
-      ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
+      base::parse::ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
       (void)diag_buffer_push(diags, diag);
     }
     return res;
@@ -169,7 +169,7 @@ export namespace base::lex {
     u64 start = cursor.offset;
     ParseResult<u64> res = cursor.parse_string_literal();
     if (!res.is_ok() && cursor.offset > start) {
-      ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
+      base::parse::ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
       (void)diag_buffer_push(diags, diag);
     }
     return res;
@@ -215,8 +215,8 @@ export namespace base::lex {
         }
 
         if (depth > 0) {
-          auto code = ParseDiagCode::UnterminatedBlockComment;
-          ParseDiagnostic diag = make_error_diag(code, block_start_offset, cursor.offset);
+          auto code = base::parse::ParseDiagCode::UnterminatedBlockComment;
+          base::parse::ParseDiagnostic diag = make_error_diag(code, block_start_offset, cursor.offset);
           (void)diag_buffer_push(diags, diag);
           return ParseResult<u8>::err(code);
         }
