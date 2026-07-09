@@ -18,11 +18,14 @@ import core_types;
 import core_memory;
 import core_result;
 
+using namespace base;
+using namespace mem;
+
 /**
- * @namespace base
- * @brief Shared low-level string and memory utilities.
+ * @namespace base::str
+ * @brief String and formatting primitives for the base layer.
  */
-export namespace base {
+export namespace base::str {
 
   /**
    * @brief Failure categories for arena-backed string formatting.
@@ -152,7 +155,7 @@ export namespace base {
    * @return Joined string view; empty view if input is empty.
    * @post Returned memory is owned by \p permanent_arena.
    */
-  Str8 str8_list_join(Arena& permanent_arena, Str8List list) {
+  Str8 list_join(Arena& permanent_arena, Str8List list) {
     if (list.total_len == 0) return Str8{};
 
     // One single allocation for the entire compound string
@@ -176,7 +179,7 @@ export namespace base {
    * @param args Active vararg list.
    * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
    */
-  StringFormatResult str8_vpushf(Arena& arena, const char* format, va_list args) {
+  StringFormatResult vpushf(Arena& arena, const char* format, va_list args) {
     va_list count_args;
     va_copy(count_args, args);
     i32 formal_len = vsnprintf(nullptr, 0, format, count_args);
@@ -220,7 +223,7 @@ export namespace base {
    * @return Ok(Str8) on success, or Err(StringFormatError) for format failure,
    *         out-of-memory, or truncation.
    */
-  StringFormatResult str8_vpush_cap(Arena& arena, u64 cap, const char* format, va_list args) {
+  StringFormatResult vpush_cap(Arena& arena, u64 cap, const char* format, va_list args) {
     if (cap == 0) {
       return StringFormatResult::ok(Str8{});
     }
@@ -259,6 +262,21 @@ export namespace base {
   }
 
   /**
+   * @brief Formats text into arena memory using exact two-pass sizing.
+   * @param arena Arena used to allocate destination bytes.
+   * @param format Printf-style format string.
+   * @param ... Format arguments.
+   * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
+   */
+  StringFormatResult pushf(Arena& arena, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    StringFormatResult result = vpushf(arena, format, args);
+    va_end(args);
+    return result;
+  }
+
+  /**
    * @brief Formats text into arena memory using caller-provided capacity cap.
    * @param arena Arena used to allocate destination bytes.
    * @param cap Maximum payload bytes (excluding null terminator safety byte).
@@ -266,10 +284,10 @@ export namespace base {
    * @param ... Format arguments.
    * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
    */
-  StringFormatResult str8_push_cap(Arena& arena, u64 cap, const char* format, ...) {
+  StringFormatResult push_cap(Arena& arena, u64 cap, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    StringFormatResult result = str8_vpush_cap(arena, cap, format, args);
+    StringFormatResult result = vpush_cap(arena, cap, format, args);
     va_end(args);
     return result;
   }
@@ -280,7 +298,7 @@ export namespace base {
    * @param b Second string view.
    * @return True if lengths and bytes are equal.
    */
-  constexpr bool str8_match(Str8 a, Str8 b) {
+  constexpr bool match(Str8 a, Str8 b) {
     if (a.len != b.len) return false;
     for (u64 i = 0; i < a.len; i++) {
       if (a.str[i] != b.str[i]) return false;
@@ -294,12 +312,17 @@ export namespace base {
    * @return 64-bit hash value.
    * @note Hash is stable for identical byte sequences.
    */
-  constexpr base::u64 str8_hash_fnv1a(Str8 string) {
-    base::u64 hash = 14695981039346656037ULL;
-    for (base::u64 i = 0; i < string.len; ++i) {
+  constexpr u64 hash_fnv1a(Str8 string) {
+    u64 hash = 14695981039346656037ULL;
+    for (u64 i = 0; i < string.len; ++i) {
         hash ^= string.str[i];
         hash *= 1099511628211ULL;
     }
     return hash;
   }
+
+}   // namespace base::str
+
+export namespace base {
+  using Str8 = str::Str8;
 }

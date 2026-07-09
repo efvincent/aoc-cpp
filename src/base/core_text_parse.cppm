@@ -5,8 +5,10 @@ import core_result;
 import core_string;
 import core_portability;
 
-export namespace base {
+using namespace base;
+using namespace str;
 
+export namespace base::parse {
   /**
    * @defgroup StringResolution Zero-Allocation String Parsing
    * @brief How to handle escaped string literals in downstream modules.
@@ -45,7 +47,8 @@ export namespace base {
    *
    * namespace my_language {
    *
-   *    Str8 resolve_string_literal(Arena& arena, Str8 raw_slice) {
+   *    base::str::Str8 resolve_string_literal(base::mem::Arena& arena,
+   *                                           base::str::Str8 raw_slice) {
    *        // Pre-allocate worst-case size (the original string length)
    *        u8* dest = arena.alloc_array<u8>(raw_slice.len);
    *        u64 write_idx = 0;
@@ -68,7 +71,7 @@ export namespace base {
    *        }
    *
    *        // Return the bounded slice representing the exact resolved length
-   *        return Str8{dest, write_idx};
+   *        return base::str::Str8{dest, write_idx};
    *    }
    *
    * } // namespace my_language
@@ -206,7 +209,7 @@ export namespace base {
   constexpr SourceLocation compute_location(Str8 buffer, u64 offset) {
     u32 line = 1;
     u32 col = 1;
-    u64 limit = base::Min(offset, buffer.len);
+    u64 limit = Min(offset, buffer.len);
     
     for (u64 i = 0; i < limit; ++i) {
       if (buffer.str[i] == '\n') {
@@ -254,21 +257,6 @@ export namespace base {
     return {line_idx + 1, column};
   } 
 
-  /**
-   * @brief High-performance constexpr FNV-1a hash for string lookups/keywords.
-   * @param str Input byte slice.
-   * @param seed Optional basis value for variant hash domains.
-   * @return 64-bit FNV-1a hash value.
-   */
-  constexpr u64 hash_fnv1a(Str8 str, u64 seed = 0xcbf29ce484222325ull) {
-      u64 hash = seed;
-      for (u64 i = 0; i < str.len; ++i) {
-          hash ^= str.str[i];
-          hash *= 0x100000001b3ull;
-      }
-      return hash;
-  }  
-
   //-------------------------------------------------------------
   // Integer Parsers (template engine)
   //-------------------------------------------------------------
@@ -303,7 +291,7 @@ export namespace base {
     bool is_negative = false;
 
     // compile time branch: check sign handling only if type is signed
-    if (base::portability::is_signed_v<T>) {
+    if (portability::is_signed_v<T>) {
       if (text.str[0] == '-') {
         is_negative = true;
         i++;
@@ -507,5 +495,5 @@ export namespace base {
     return ParseResult<f32>::ok(static_cast<f32>(res.value));
   }
 
-}
+}   // namespace base::parse
 

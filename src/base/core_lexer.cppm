@@ -6,7 +6,13 @@ import core_result;
 import core_text_parse;
 import core_portability;
 
-export namespace base {
+using namespace base;
+using namespace str;
+using namespace parse;
+
+export namespace base::lex {
+  template <typename T>
+  using ParseResult = ParseResult<T>;
 
   /**
    * @defgroup LexerCore Zero-Allocation Lexer Primitives
@@ -234,7 +240,8 @@ export namespace base {
      * @brief Consume an integer prefix and parse it through a strict parser backend.
      *
      * Unsigned targets consume `[0-9]+`. Signed targets consume `[+|-]?[0-9]+`.
-     * The consumed window is then delegated to a strict `parse_*` function.
+     * The consumed window is then delegated to a strict `base::parse::parse_*`
+     * function.
      *
      * Failure semantics:
      * - If no valid integer prefix exists at the current offset, this returns error
@@ -251,7 +258,7 @@ export namespace base {
       u64 start = this->offset;
       u64 scan = start;
 
-      if constexpr (base::portability::is_signed_v<T>) {
+      if constexpr (portability::is_signed_v<T>) {
         if (scan < this->input.len && (this->input.str[scan] == '+' || this->input.str[scan] == '-')) {
           scan++;
         }
@@ -275,7 +282,7 @@ export namespace base {
      * @brief Consume `[0-9]+` and parse as `u8`.
      *
      * This method performs prefix window discovery and delegates numeric
-     * validation/range checks to strict `parse_u8`.
+     * validation/range checks to strict `base::parse::parse_u8`.
      */
     constexpr ParseResult<u8> consume_u8() {
       return consume_int_impl<u8>(parse_u8);
@@ -468,4 +475,4 @@ export namespace base {
       break;  // outer while
     }
   }
-}     // namespace base
+}     // namespace base::lex

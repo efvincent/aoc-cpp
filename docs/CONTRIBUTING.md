@@ -28,6 +28,16 @@ We treat C++ strictly as a **"Better C Compiler."** We purposefully reject compl
 2. **C++ Templates:** Allowed for zero-cost generic utilities where they reduce duplication without hiding control flow (for example, parser helpers, cursor consume helpers, or type-generic containers). Deep compile-time recursive metaprogramming tricks are rejected.
 3. **Struct-Scoped Methods:** Used solely for syntactic convenience and low-overhead modular ergonomics without object-oriented state dispatch.
 
+### Namespace Surface Policy
+- `base` is reserved for prelude-level primitives that are used nearly everywhere: scalar aliases, tiny arithmetic helpers, and compact result carriers.
+- Subsystem APIs must live one level down in purpose-built namespaces such as `base::str`, `base::mem`, `base::parse`, `base::lex`, `base::fs`, `base::console`, `base::vm`, and `base::portability`.
+- Function names should not carry redundant subsystem prefixes when the namespace already provides that context. Prefer `base::str::push_cap(...)` over names like `str8_push_cap(...)`.
+- Keep the namespace tree shallow. One subsystem level is the default; deeper nesting needs a strong architectural reason.
+- In implementation files, a local `using namespace base;` is acceptable when a module consumes many prelude-level names and would otherwise become visually noisy.
+- For heavily used subsystems in a single module, a local namespace alias such as `namespace mem = base::mem;` or `namespace str = base::str;` is preferred over repeated fully qualified names.
+- Keep those imports and aliases narrow in scope; do not place them in exported interfaces or headers that are meant to be included broadly.
+- Prefer explicit `using base::Name;` imports when only a few symbols are needed, and reserve `using namespace ...` for files where the repetition cost is actually high.
+
   
 ### Error Accumulation Contract (Lexer/Parser Split)
 

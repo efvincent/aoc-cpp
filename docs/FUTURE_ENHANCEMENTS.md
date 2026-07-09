@@ -124,13 +124,13 @@ Current direction:
 ### Planned API split
 
 1. Exact formatting path (two-pass):
-- `str8_pushf(...)` remains the exact-size formatter.
+- `base::str::pushf(...)` remains the exact-size formatter.
 - Performs a sizing pass and then a write pass.
 - Returns `Result<StringFormatError, Str8>`.
 - Prioritizes correctness and precise allocation footprint.
 
 2. Capped formatting path (single-pass):
-- Add a capped formatter variant (for example `str8_pushf_cap(...)`).
+- `base::str::push_cap(...)` is the capped formatter variant.
 - Caller provides maximum output capacity.
 - Performs one formatting pass into `cap + 1` bytes.
 - Returns explicit truncation/failure via `StringFormatError`.

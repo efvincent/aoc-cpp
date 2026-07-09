@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "repro-make-debug",
+			"type": "shell",
+			"command": "make debug",
+			"isBackground": false
+		},
+		{
+			"label": "repro-make-debug-after-fix",
+			"type": "shell",
+			"command": "make debug",
+			"isBackground": false
+		},
+		{
+			"label": "verify-make-docs",
+			"type": "shell",
+			"command": "make docs",
+			"isBackground": false
+		}
+	]
+}

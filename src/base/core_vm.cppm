@@ -22,10 +22,10 @@ export module core_vm;
 import core_types;
 
 /**
- * @namespace base
- * @brief Shared low-level primitives including VM allocation boundaries.
+ * @namespace base::vm
+ * @brief Operating-system virtual memory boundaries for base allocators.
  */
-export namespace base {
+export namespace base::vm {
 
   /**
    * @brief Allocates a contiguous writable virtual memory region.
@@ -33,7 +33,7 @@ export namespace base {
    * @return Base pointer to writable storage, or nullptr on failure.
    * @note Current implementation delegates to the Linux mmap backend.
    */
-  inline void* vm_alloc(u64 bytes) noexcept {
+  inline void* alloc(u64 bytes) noexcept {
     #if defined(__linux__)
     
       int map_flags = MAP_PRIVATE | MAP_ANONYMOUS;
@@ -51,11 +51,11 @@ export namespace base {
   }
 
   /**
-   * @brief Releases a region previously returned by vm_alloc.
-   * @param ptr Base pointer returned by vm_alloc.
+  * @brief Releases a region previously returned by alloc.
+  * @param ptr Base pointer returned by alloc.
    * @param bytes Size of the mapped region in bytes.
    */
-  inline void vm_free(void* ptr, u64 bytes) noexcept {
+  inline void free(void* ptr, u64 bytes) noexcept {
     #if defined(__linux__)
     if (ptr) munmap(ptr, bytes);
     #endif
@@ -67,7 +67,7 @@ export namespace base {
    * @param ptr Base pointer of the mapped region.
    * @param bytes Length of the mapped region.
    */
-  inline void vm_hint_hugepages(void* ptr, u64 bytes) noexcept {
+  inline void hint_hugepages(void* ptr, u64 bytes) noexcept {
     #if defined(MADV_HUGEPAGE)
     madvise(ptr, bytes, MADV_HUGEPAGE);
     #else
@@ -75,4 +75,4 @@ export namespace base {
     (void)bytes;
     #endif
   }
-}
+}   // namespace base::vm

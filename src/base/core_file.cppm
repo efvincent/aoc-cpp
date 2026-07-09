@@ -18,11 +18,14 @@ import core_string;
 import core_memory;
 import core_result;
 
+using namespace base;
+using namespace base::str;
+
 /**
- * @namespace base
- * @brief Shared low-level file utilities.
+ * @namespace base::fs
+ * @brief Arena-friendly file IO utilities.
  */
-export namespace base {
+export namespace fs {
   // ------------------------------------------------------------
   // File Diagnostics
   // ------------------------------------------------------------
@@ -52,7 +55,7 @@ export namespace base {
    * @param filepath Null-terminated path to open.
    * @return Ok(Str8) on success, Err(FileError) on failure.
    */
-  FileReadResult file_read_all(Arena& arena, const char* filepath) {
+  FileReadResult read_all(mem::Arena& arena, const char* filepath) {
     // Open in binary mode to avoid newline translation.
     FILE* file = fopen(filepath, "rb");
     if (!file) {
@@ -73,18 +76,20 @@ export namespace base {
       return FileReadResult::ok(Str8{});
     }
 
-    u8* buffer = arena.alloc_array<u8>(file_size);
+    u64 file_size_u64 = static_cast<u64>(file_size);
+
+    u8* buffer = arena.alloc_array<u8>(file_size_u64);
     if (!buffer) {
       fclose(file);
       return FileReadResult::err(FileError::OutOfMemory);
     }
 
-    u64 bytes_read = fread(buffer, 1, file_size, file);
+    u64 bytes_read = fread(buffer, 1, file_size_u64, file);
     fclose(file);
 
     // Detect hard failure when short read.
-    if (bytes_read != file_size) {
-      arena.offset -= file_size;  // reclaim memory
+    if (bytes_read != file_size_u64) {
+      arena.offset -= file_size_u64;  // reclaim memory
       return FileReadResult::err(FileError::ReadFailed);
     }
 
@@ -101,7 +106,7 @@ export namespace base {
    * @param data Byte slice to persist.
    * @return Ok(bytes_written) on success, Err(FileError) on failure.
    */
-  FileWriteResult file_write_all(const char* filepath, Str8 data) {
+  FileWriteResult write_all(const char* filepath, Str8 data) {
     FILE* file = fopen(filepath, "wb");
     if (!file) {
       return FileWriteResult::err(FileError::NotFoundOrLocked);
@@ -121,4 +126,4 @@ export namespace base {
 
     return FileWriteResult::ok(bytes_written);
   }
-}
+}   // namespace base::fs

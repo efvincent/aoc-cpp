@@ -17,7 +17,10 @@ import core_lexer;
 import core_text_parse;
 import core_result;
 
-export namespace base {
+using namespace base;
+using namespace parse;
+
+export namespace base::lex {
   /**
    * @brief Failure categories for diagnostic buffer append operations.
    */
@@ -79,7 +82,7 @@ export namespace base {
    */
   template <typename T>
   constexpr ParseResult<T> coord_consume_int(Str8Cursor& cursor,
-                                             ParseResult<T> (*parser)(Str8),
+                                             ParseResult<T> (*parser)(str::Str8),
                                              DiagBuffer& diags) {
     u64 start = cursor.offset;
     ParseResult<T> res = cursor.consume_int_impl<T>(parser);
@@ -226,4 +229,4 @@ export namespace base {
     }
     return ParseResult<u8>::ok(0);
   }
-}   // namespace base
+}   // namespace base::lex

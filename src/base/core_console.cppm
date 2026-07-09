@@ -19,12 +19,14 @@ import core_string;
 import core_memory;
 import core_result;
 
-/**
- * @namespace base
- * @brief Shared low-level console utilities.
- */
-export namespace base {
+using namespace base;
+using namespace str;
 
+/**
+ * @namespace base::console
+ * @brief Low-level console IO utilities.
+ */
+export namespace base::console {
   /**
    * @brief Console input failure categories for line-oriented reads.
    */
@@ -118,10 +120,10 @@ export namespace base {
    * @param ... Format arguments.
    * @return Ok(total_bytes_written) or Err(ConsoleWriteError).
    */
-  inline ConsoleWriteResult printfl(Arena& arena, const char* format, ...) {
+  inline ConsoleWriteResult printfl(mem::Arena& arena, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    StringFormatResult fmt = str8_vpushf(arena, format, args);
+    StringFormatResult fmt = vpushf(arena, format, args);
     va_end(args);
 
     if (!fmt.is_ok()) {
@@ -148,10 +150,10 @@ export namespace base {
    * @param ... Format arguments.
    * @return Ok(total_bytes_written) or Err(ConsoleWriteError).
    */
-  inline ConsoleWriteResult printfl_cap(Arena& arena, u64 cap, const char* format, ...) {
+  inline ConsoleWriteResult printfl_cap(mem::Arena& arena, u64 cap, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    StringFormatResult fmt = str8_vpush_cap(arena, cap, format, args);
+    StringFormatResult fmt = vpush_cap(arena, cap, format, args);
     va_end(args);
 
     if (!fmt.is_ok()) {
@@ -178,10 +180,10 @@ export namespace base {
    * @param ... Format arguments.
    * @return Ok(total_bytes_written) or Err(ConsoleWriteError).
    */
-  inline ConsoleWriteResult eprintfl_cap(Arena& arena, u64 cap, const char* format, ...) {
+  inline ConsoleWriteResult eprintfl_cap(mem::Arena& arena, u64 cap, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    StringFormatResult fmt = str8_vpush_cap(arena, cap, format, args);
+    StringFormatResult fmt = vpush_cap(arena, cap, format, args);
     va_end(args);
 
     if (!fmt.is_ok()) {
@@ -229,9 +231,9 @@ export namespace base {
    * @brief Writes text to stderr and always appends a newline.
    * @param text UTF-8 byte slice to write.
    */
-  inline void print_err(Str8 text) {
+  inline void print_err(base::Str8 text) {
     (void)write_stderr(text);
-    (void)write_stderr(Str8("\n"));
+    (void)write_stderr(base::Str8("\n"));
   }
 
   // ==========================================================================
@@ -246,7 +248,7 @@ export namespace base {
    *         for EOF, allocation failure, input failure, or truncation.
    * @note An empty line is returned as Ok(Str8{}).
    */
-  inline ConsoleReadResult read_line(Arena& arena, u64 max_bytes = 1024) {
+  inline ConsoleReadResult read_line(base::mem::Arena& arena, u64 max_bytes = 1024) {
     using enum ConsoleError;
     u64 snapshot = arena.offset;
 
@@ -281,7 +283,7 @@ export namespace base {
 
     if (len == 0) {
       arena.offset = snapshot;
-      return ConsoleReadResult::ok(Str8{});
+      return ConsoleReadResult::ok(base::Str8{});
     }
 
     if (!found_newline && !found_null && len == max_bytes - 1 && !feof(stdin)) {
@@ -290,7 +292,7 @@ export namespace base {
     }
 
     arena.offset -= (max_bytes - len);
-    return ConsoleReadResult::ok(Str8(buffer, len));
+    return ConsoleReadResult::ok(base::Str8(buffer, len));
   }
 
-}
+}   // namespace base::console
