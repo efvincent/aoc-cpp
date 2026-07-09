@@ -28,6 +28,12 @@ We treat C++ strictly as a **"Better C Compiler."** We purposefully reject compl
 2. **C++ Templates:** Allowed for zero-cost generic utilities where they reduce duplication without hiding control flow (for example, parser helpers, cursor consume helpers, or type-generic containers). Deep compile-time recursive metaprogramming tricks are rejected.
 3. **Struct-Scoped Methods:** Used solely for syntactic convenience and low-overhead modular ergonomics without object-oriented state dispatch.
 
+### Namespace Surface Policy
+- `base` is reserved for prelude-level primitives that are used nearly everywhere: scalar aliases, tiny arithmetic helpers, and compact result carriers.
+- Subsystem APIs must live one level down in purpose-built namespaces such as `base::str`, `base::mem`, `base::parse`, `base::lex`, `base::fs`, `base::console`, `base::vm`, and `base::portability`.
+- Function names should not carry redundant subsystem prefixes when the namespace already provides that context. Prefer `base::str::push_cap(...)` over names like `str8_push_cap(...)`.
+- Keep the namespace tree shallow. One subsystem level is the default; deeper nesting needs a strong architectural reason.
+
   
 ### Error Accumulation Contract (Lexer/Parser Split)
 

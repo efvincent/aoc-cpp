@@ -19,10 +19,10 @@ import core_memory;
 import core_result;
 
 /**
- * @namespace base
- * @brief Shared low-level file utilities.
+ * @namespace base::fs
+ * @brief Arena-friendly file IO utilities.
  */
-export namespace base {
+export namespace base::fs {
   // ------------------------------------------------------------
   // File Diagnostics
   // ------------------------------------------------------------
@@ -38,7 +38,7 @@ export namespace base {
   };
 
   /** @brief Result alias for file reads (error or byte slice). */
-  using FileReadResult = Result<FileError, Str8>;
+  using FileReadResult = Result<FileError, base::str::Str8>;
   /** @brief Result alias for file writes (error or bytes written). */
   using FileWriteResult = Result<FileError, u64>;
 
@@ -52,7 +52,7 @@ export namespace base {
    * @param filepath Null-terminated path to open.
    * @return Ok(Str8) on success, Err(FileError) on failure.
    */
-  FileReadResult file_read_all(Arena& arena, const char* filepath) {
+  FileReadResult read_all(base::mem::Arena& arena, const char* filepath) {
     // Open in binary mode to avoid newline translation.
     FILE* file = fopen(filepath, "rb");
     if (!file) {
@@ -70,25 +70,27 @@ export namespace base {
     // Empty file is a valid state, not an error
     if (file_size == 0) {
       fclose(file);
-      return FileReadResult::ok(Str8{});
+      return FileReadResult::ok(base::str::Str8{});
     }
 
-    u8* buffer = arena.alloc_array<u8>(file_size);
+    u64 file_size_u64 = static_cast<u64>(file_size);
+
+    u8* buffer = arena.alloc_array<u8>(file_size_u64);
     if (!buffer) {
       fclose(file);
       return FileReadResult::err(FileError::OutOfMemory);
     }
 
-    u64 bytes_read = fread(buffer, 1, file_size, file);
+    u64 bytes_read = fread(buffer, 1, file_size_u64, file);
     fclose(file);
 
     // Detect hard failure when short read.
-    if (bytes_read != file_size) {
-      arena.offset -= file_size;  // reclaim memory
+    if (bytes_read != file_size_u64) {
+      arena.offset -= file_size_u64;  // reclaim memory
       return FileReadResult::err(FileError::ReadFailed);
     }
 
-    return FileReadResult::ok(Str8(buffer, bytes_read));
+    return FileReadResult::ok(base::str::Str8(buffer, bytes_read));
   }
 
   // ------------------------------------------------------------
@@ -101,7 +103,7 @@ export namespace base {
    * @param data Byte slice to persist.
    * @return Ok(bytes_written) on success, Err(FileError) on failure.
    */
-  FileWriteResult file_write_all(const char* filepath, Str8 data) {
+  FileWriteResult write_all(const char* filepath, base::str::Str8 data) {
     FILE* file = fopen(filepath, "wb");
     if (!file) {
       return FileWriteResult::err(FileError::NotFoundOrLocked);
@@ -121,4 +123,4 @@ export namespace base {
 
     return FileWriteResult::ok(bytes_written);
   }
-}
+}   // namespace base::fs

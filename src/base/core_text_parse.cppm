@@ -5,8 +5,7 @@ import core_result;
 import core_string;
 import core_portability;
 
-export namespace base {
-
+export namespace base::parse {
   /**
    * @defgroup StringResolution Zero-Allocation String Parsing
    * @brief How to handle escaped string literals in downstream modules.
@@ -45,7 +44,8 @@ export namespace base {
    *
    * namespace my_language {
    *
-   *    Str8 resolve_string_literal(Arena& arena, Str8 raw_slice) {
+  *    base::str::Str8 resolve_string_literal(base::mem::Arena& arena,
+  *                                           base::str::Str8 raw_slice) {
    *        // Pre-allocate worst-case size (the original string length)
    *        u8* dest = arena.alloc_array<u8>(raw_slice.len);
    *        u64 write_idx = 0;
@@ -68,7 +68,7 @@ export namespace base {
    *        }
    *
    *        // Return the bounded slice representing the exact resolved length
-   *        return Str8{dest, write_idx};
+  *        return base::str::Str8{dest, write_idx};
    *    }
    *
    * } // namespace my_language
@@ -118,7 +118,7 @@ export namespace base {
    *
    * Always returns at least 1 (line 1 at offset 0).
    */
-  constexpr u32 line_index_required_capacity(Str8 buffer) {
+  constexpr u32 line_index_required_capacity(base::str::Str8 buffer) {
     u32 lines = 1;
     for(u64 i = 0; i < buffer.len; ++i) {
       if (buffer.str[i] == '\n') {
@@ -137,7 +137,7 @@ export namespace base {
    * @return Ok(LineIndex) on success, or Err(LineIndexError) for invalid arguments
    *         or insufficient capacity.
    */
-  constexpr LineIndexBuildResult line_index_build(Str8 buffer, u64* out_line_starts, u32 capacity) {
+  constexpr LineIndexBuildResult line_index_build(base::str::Str8 buffer, u64* out_line_starts, u32 capacity) {
     if (out_line_starts == nullptr || capacity == 0) {
       return LineIndexBuildResult::err(LineIndexError::InvalidArguments);
     }
@@ -203,7 +203,7 @@ export namespace base {
   static_assert(portability::is_trivially_copyable_v<ParseDiagnostic>, 
                 "ParseDiagnostic must remain trivially copyable.");
 
-  constexpr SourceLocation compute_location(Str8 buffer, u64 offset) {
+  constexpr SourceLocation compute_location(base::str::Str8 buffer, u64 offset) {
     u32 line = 1;
     u32 col = 1;
     u64 limit = base::Min(offset, buffer.len);
@@ -254,21 +254,6 @@ export namespace base {
     return {line_idx + 1, column};
   } 
 
-  /**
-   * @brief High-performance constexpr FNV-1a hash for string lookups/keywords.
-   * @param str Input byte slice.
-   * @param seed Optional basis value for variant hash domains.
-   * @return 64-bit FNV-1a hash value.
-   */
-  constexpr u64 hash_fnv1a(Str8 str, u64 seed = 0xcbf29ce484222325ull) {
-      u64 hash = seed;
-      for (u64 i = 0; i < str.len; ++i) {
-          hash ^= str.str[i];
-          hash *= 0x100000001b3ull;
-      }
-      return hash;
-  }  
-
   //-------------------------------------------------------------
   // Integer Parsers (template engine)
   //-------------------------------------------------------------
@@ -296,7 +281,7 @@ export namespace base {
    * @return Parsed integer or error when invalid/empty/overflowing.
    */
   template <typename T>
-  constexpr ParseResult<T> parse_int_impl(Str8 text) {
+  constexpr ParseResult<T> parse_int_impl(base::str::Str8 text) {
     if (text.len == 0) return ParseResult<T>::err(ParseDiagCode::EmptyInput);
 
     u64 i = 0;
@@ -360,21 +345,21 @@ export namespace base {
   }
 
   /** @brief Parse `Str8` into `u8`. */
-  constexpr ParseResult<u8>  parse_u8(Str8 t)  { return parse_int_impl<u8>(t); }
+  constexpr ParseResult<u8>  parse_u8(base::str::Str8 t)  { return parse_int_impl<u8>(t); }
   /** @brief Parse `Str8` into `i8`. */
-  constexpr ParseResult<i8>  parse_i8(Str8 t)  { return parse_int_impl<i8>(t); }
+  constexpr ParseResult<i8>  parse_i8(base::str::Str8 t)  { return parse_int_impl<i8>(t); }
   /** @brief Parse `Str8` into `u16`. */
-  constexpr ParseResult<u16> parse_u16(Str8 t) { return parse_int_impl<u16>(t); }
+  constexpr ParseResult<u16> parse_u16(base::str::Str8 t) { return parse_int_impl<u16>(t); }
   /** @brief Parse `Str8` into `i16`. */
-  constexpr ParseResult<i16> parse_i16(Str8 t) { return parse_int_impl<i16>(t); }
+  constexpr ParseResult<i16> parse_i16(base::str::Str8 t) { return parse_int_impl<i16>(t); }
   /** @brief Parse `Str8` into `u32`. */
-  constexpr ParseResult<u32> parse_u32(Str8 t) { return parse_int_impl<u32>(t); }
+  constexpr ParseResult<u32> parse_u32(base::str::Str8 t) { return parse_int_impl<u32>(t); }
   /** @brief Parse `Str8` into `i32`. */
-  constexpr ParseResult<i32> parse_i32(Str8 t) { return parse_int_impl<i32>(t); }
+  constexpr ParseResult<i32> parse_i32(base::str::Str8 t) { return parse_int_impl<i32>(t); }
   /** @brief Parse `Str8` into `u64`. */
-  constexpr ParseResult<u64> parse_u64(Str8 t) { return parse_int_impl<u64>(t); }
+  constexpr ParseResult<u64> parse_u64(base::str::Str8 t) { return parse_int_impl<u64>(t); }
   /** @brief Parse `Str8` into `i64`. */
-  constexpr ParseResult<i64> parse_i64(Str8 t) { return parse_int_impl<i64>(t); }  
+  constexpr ParseResult<i64> parse_i64(base::str::Str8 t) { return parse_int_impl<i64>(t); }  
 
 
   //-------------------------------------------------------------
@@ -393,7 +378,7 @@ export namespace base {
    * @note This function is strict over the passed slice only. Error accumulation
    *       and continued parsing across a full buffer are coordinator-layer tasks.
    */
-  constexpr ParseResult<f64> parse_f64(Str8 text) {
+  constexpr ParseResult<f64> parse_f64(base::str::Str8 text) {
     if (text.len == 0) {
       return ParseResult<f64>::err(ParseDiagCode::EmptyInput);
     }
@@ -499,7 +484,7 @@ export namespace base {
    * @param text Input byte slice.
    * @return Parsed `f32` or forwarded parse error.
    */
-  constexpr ParseResult<f32> parse_f32(Str8 text) {
+  constexpr ParseResult<f32> parse_f32(base::str::Str8 text) {
     auto res = parse_f64(text);
     if (!res.is_ok()) {
       return ParseResult<f32>::err(res.error);
@@ -507,5 +492,5 @@ export namespace base {
     return ParseResult<f32>::ok(static_cast<f32>(res.value));
   }
 
-}
+}   // namespace base::parse
 

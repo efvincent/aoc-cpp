@@ -18,10 +18,10 @@ import core_portability;
 import core_vm;
 
 /**
- * @namespace base
- * @brief Shared low-level allocation and utility primitives.
+ * @namespace base::mem
+ * @brief Arena allocation primitives for transient data.
  */
-export namespace base {
+export namespace base::mem {
 
   /**
    * @brief Linear allocator using a single contiguous mapped memory region.
@@ -53,12 +53,12 @@ export namespace base {
       u64 total_capacity = align_forward(requested_capacity, this->THP_ALIGNMENT);
 
       // request writable virtual memory through the platform VM backend
-      void* ptr = vm_alloc(total_capacity);
+      void* ptr = base::vm::alloc(total_capacity);
       if (!ptr) {
         return false;
       }
   
-      vm_hint_hugepages(ptr, total_capacity);
+      base::vm::hint_hugepages(ptr, total_capacity);
 
       this->buffer = reinterpret_cast<u8*>(ptr);
       this->capacity = total_capacity;
@@ -132,7 +132,7 @@ export namespace base {
     void free() {
       BASE_ASSERT(this->buffer);
       if (this->buffer) {
-        vm_free(this->buffer, this->capacity);
+        base::vm::free(this->buffer, this->capacity);
         this->buffer = nullptr;
         this->capacity = 0;
         this->offset = 0;
@@ -176,4 +176,8 @@ export namespace base {
 
   };
 
+}   // namespace base::mem
+
+export namespace base {
+  using Arena = mem::Arena;
 }
