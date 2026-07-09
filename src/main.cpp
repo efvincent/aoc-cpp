@@ -5,11 +5,6 @@
 
 #include <inttypes.h>
 
-/**
- * @file main.cpp
- * @brief Temporary Advent of Code worker entry point and smoke-test harness.
- */
-
 import core_types;
 import core_string;
 import core_file;
@@ -46,7 +41,7 @@ int main() {
 
   int exit_code = 0;
 
-  auto file_result = file_read_all(arena, "./data/2015/day02.txt");
+  auto file_result = file_read_all(arena, "./data/2015/day01.txt");
   if (file_result.is_ok()) {
     i64 answer = part1(file_result.value);
 
