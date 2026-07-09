@@ -1,8 +1,5 @@
 module;
 
-#include <stddef.h>
-#include <memory>
-#include <sys/mman.h>
 #include "core_debug.h"
 
 /**
@@ -17,6 +14,8 @@ module;
 export module core_memory;
 
 import core_types;
+import core_portability;
+import core_vm;
 
 /**
  * @namespace base
@@ -53,20 +52,13 @@ export namespace base {
       // round capacity up to nearest 2MB boundary for the THP daemon
       u64 total_capacity = align_forward(requested_capacity, this->THP_ALIGNMENT);
 
-      // standard mmap - will succeed if virtual address space is available
-      void* ptr = mmap
-        ( nullptr
-        , total_capacity
-        , PROT_READ | PROT_WRITE
-        , MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE
-        , -1, 0 );
-      
-      if (ptr == MAP_FAILED) {
+      // request writable virtual memory through the platform VM backend
+      void* ptr = vm_alloc(total_capacity);
+      if (!ptr) {
         return false;
       }
   
-      // advise linux kernel to use huge pages
-      madvise(ptr, total_capacity, MADV_HUGEPAGE);
+      vm_hint_hugepages(ptr, total_capacity);
 
       this->buffer = reinterpret_cast<u8*>(ptr);
       this->capacity = total_capacity;
@@ -91,9 +83,9 @@ export namespace base {
       BASE_ASSERT(raw_ptr);
       if (!raw_ptr) return nullptr;
 
-      // C++23 lifetime intrinsic: formally instructs the compiler optimizer
-      // that a contiguous sequence of type T has officially begun its lifecycle.
-      return std::start_lifetime_as_array<T>(raw_ptr, count);
+      // Project portability shim formally begins typed array lifetime over the
+      // raw storage returned by the arena.
+      return base::portability::start_lifetime_as_array<T>(raw_ptr, count);
     }
 
     /**
@@ -140,7 +132,7 @@ export namespace base {
     void free() {
       BASE_ASSERT(this->buffer);
       if (this->buffer) {
-        munmap(this->buffer, this->capacity);
+        vm_free(this->buffer, this->capacity);
         this->buffer = nullptr;
         this->capacity = 0;
         this->offset = 0;

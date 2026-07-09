@@ -1,64 +1,59 @@
 # aoc-cpp
 
-`aoc-cpp` is a small Advent of Code workspace built around Clang, C++23 modules, and a deliberately low-level "orthodox C++" style.
+Low-level Advent of Code workspace using C++23 modules and explicit systems-style design.
 
-## Requirements
+This README is the documentation index and recommended reading path.
 
-- `clang++` with C++23 modules support
-- `make`
-- `doxygen` for API docs
+## Documentation Index
 
-## Layout
+### Start here (core library users)
 
-- `src/` contains the executable entry point and C++ module units.
-- `docs/` contains project documentation and the checked-in Doxygen config.
-- `build/` contains generated binaries, module caches, objects, and other build output.
+1. [docs/ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md)
+	- Durable architecture decisions for memory model and low-level behavior.
+	- Includes why arena allocation uses explicit lifetime start for typed views.
 
-## Build
+2. [docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md)
+	- Forward-looking roadmap for portability, core tests, CLI utilities,
+	  huge file streaming, and HTTP client support.
 
-The default configuration is `debug`.
+3. Doxygen API reference
+	- Generated output: [docs/html/index.html](docs/html/index.html)
+	- Configuration: [docs/Doxyfile](docs/Doxyfile)
+
+### Contributor and project policy
+
+1. [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
+	- Coding style, architectural constraints, and contribution rules.
+
+## Build and Tooling
+
+### Requirements
+
+- clang++ with C++23 modules support
+- make
+- doxygen (for API docs)
+
+### Common commands
 
 ```sh
 make
-```
-
-Other supported configurations:
-
-```sh
-make CONFIG=release
-make CONFIG=instrument
-```
-
-Clean generated output:
-
-```sh
+make release
+make lto
+make instrument
+make bear
+make docs
 make clean
 make clean_all
 ```
 
-## Tooling
+## Repository Layout
 
-Regenerate the compilation database used by `clangd`:
-
-```sh
-make bear
-```
-
-This target rebuilds the project with Clang's native `-MJ` compilation database
-fragments so C++23 module interface units are included correctly.
-
-No external `bear` binary is required for this workflow.
-
-Generate Doxygen output with the checked-in config:
-
-```sh
-make docs
-```
-
-That target reads `docs/Doxyfile` and writes generated output to `docs/html/` and `docs/latex/`.
+- src/: executable entry point and C++ module units
+- docs/: authored docs, Doxygen config, generated API docs
+- data/: Advent of Code inputs
+- build/: generated binaries, module caches, objects, and intermediate output
 
 ## Notes
 
-- The build currently uses `clang++` directly from the `makefile`.
-- `compile_commands.json` is generated metadata and should be refreshed when source layout or compiler flags change.
-- The repository includes VS Code settings for `clangd` and `uncrustify`.
+- Default build configuration is debug.
+- Compilation database is generated metadata and should be refreshed when compiler flags or source layout change.

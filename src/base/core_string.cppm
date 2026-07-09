@@ -1,6 +1,6 @@
 module;
-#include <cstdarg>
-#include <cstring>
+#include <stdarg.h>
+#include <string.h>
 #include <stdio.h>
 
 /**
@@ -16,7 +16,6 @@ export module core_string;
 
 import core_types;
 import core_memory;
-// import core_result;
 
 /**
  * @namespace base

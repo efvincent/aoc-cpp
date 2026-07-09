@@ -1,13 +1,10 @@
-module;
-// Global module fragment for core C intrinsics if needed
-#include <type_traits>
-
 export module core_lexer;
 
 import core_types;
 import core_string;
 import core_result;
 import core_text_parse;
+import core_portability;
 
 export namespace base {
 
@@ -254,7 +251,7 @@ export namespace base {
       u64 start = this->offset;
       u64 scan = start;
 
-      if constexpr (std::is_signed_v<T>) {
+      if constexpr (base::portability::is_signed_v<T>) {
         if (scan < this->input.len && (this->input.str[scan] == '+' || this->input.str[scan] == '-')) {
           scan++;
         }

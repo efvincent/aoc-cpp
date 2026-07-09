@@ -1,5 +1,10 @@
 # Architectural & Coding Style Guide: Project "Lithic" / Advent of Code
 
+Scope note:
+- This file is contributor-focused policy and implementation style guidance.
+- For core-library architecture rationale, see [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md).
+- For planned capability expansion (portability, tests, CLI, streaming, HTTP), see [FUTURE_ENHANCEMENTS.md](FUTURE_ENHANCEMENTS.md).
+
 This document serves as the absolute reference for the architectural foundations, constraints, and ergonomic style decisions established for our high-performance systems development framework. It preserves the structural reasoning required to maintain an airtight, predictable, and bare-metal optimized development environment.
 
 ---
