@@ -44,8 +44,8 @@ export namespace base::parse {
    *
    * namespace my_language {
    *
-  *    base::str::Str8 resolve_string_literal(base::mem::Arena& arena,
-  *                                           base::str::Str8 raw_slice) {
+   *    base::str::Str8 resolve_string_literal(base::mem::Arena& arena,
+   *                                           base::str::Str8 raw_slice) {
    *        // Pre-allocate worst-case size (the original string length)
    *        u8* dest = arena.alloc_array<u8>(raw_slice.len);
    *        u64 write_idx = 0;
@@ -68,7 +68,7 @@ export namespace base::parse {
    *        }
    *
    *        // Return the bounded slice representing the exact resolved length
-  *        return base::str::Str8{dest, write_idx};
+   *        return base::str::Str8{dest, write_idx};
    *    }
    *
    * } // namespace my_language

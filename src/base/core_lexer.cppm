@@ -238,8 +238,8 @@ export namespace base::lex {
      * @brief Consume an integer prefix and parse it through a strict parser backend.
      *
      * Unsigned targets consume `[0-9]+`. Signed targets consume `[+|-]?[0-9]+`.
-    * The consumed window is then delegated to a strict `base::parse::parse_*`
-    * function.
+     * The consumed window is then delegated to a strict `base::parse::parse_*`
+     * function.
      *
      * Failure semantics:
      * - If no valid integer prefix exists at the current offset, this returns error
