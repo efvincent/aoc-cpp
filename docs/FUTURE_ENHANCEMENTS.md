@@ -44,6 +44,11 @@ Current direction:
 - Use compiler shim where required.
 - Keep conservative fallback for trivially copyable types only.
 
+5. Lock scalar ABI and vararg formatting policy:
+- Add compile-time assertions that base aliases preserve required widths on all supported targets.
+- Standardize C vararg formatting for fixed-width integers using inttypes macros (for example `PRId64` and `PRIu64`) instead of hard-coded length modifiers.
+- Add portability tests that compile and execute representative formatting paths across supported toolchains.
+
 ### Success criteria
 
 - Builds on Linux + GCC, Linux + Clang, and Windows + MSVC.
