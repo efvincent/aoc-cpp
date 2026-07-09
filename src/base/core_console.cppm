@@ -284,7 +284,7 @@ export namespace base {
       return ConsoleReadResult::ok(Str8{});
     }
 
-    if (!found_newline && !found_null) {
+    if (!found_newline && !found_null && len == max_bytes - 1 && !feof(stdin)) {
       arena.offset = snapshot;
       return ConsoleReadResult::err(LineTooLong);
     }
