@@ -2,12 +2,14 @@
 # Configuration and target swapping
 #=============================================
 
-# Default to debug if no configuration 
-CONFIG ?= debug
+.DEFAULT_GOAL := all
+
+# Internal build mode selector (user-facing entry points are make targets).
+MODE ?= debug
 
 # Directory configuration
 SRC_DIR   := src
-BUILD_DIR := build/$(CONFIG)
+BUILD_DIR := build/$(MODE)
 MOD_DIR   := $(BUILD_DIR)/modules
 OBJ_DIR   := $(BUILD_DIR)/obj
 DOC_DIR   := docs
@@ -18,7 +20,7 @@ RM := rm -rf
 MKDIR := mkdir -p
 
 # Binary outputs
-TARGET := build/aoc_worker_$(CONFIG)
+TARGET := build/aoc_worker_$(MODE)
 DOXYFILE := docs/Doxyfile
 COMPDB_FILE := compile_commands.json
 
@@ -29,16 +31,19 @@ COMPDB_FILE := compile_commands.json
 CXX := clang++
 BASE_FLAGS := -std=c++23 -fno-exceptions -fno-rtti -Wall -Wextra -Wpedantic
 
-ifeq ($(CONFIG), release)
+ifeq ($(MODE), release)
 	# High optimization release
 	CXXFLAGS := $(BASE_FLAGS) -O3 -march=native -DNDEBUG
-else ifeq ($(CONFIG), instrument)
+else ifeq ($(MODE), lto)
+	# High optimization release with full LTO
+	CXXFLAGS := $(BASE_FLAGS) -O3 -march=native -DNDEBUG -flto=full
+else ifeq ($(MODE), instrument)
 	# Sanitizer & Instrumentation matrix (bounds, memory, UB)
 	# Note: Banned raw new/delete means ASan tracks your OS file reads and Arena bounds
-	CXXFLAGS := $(BASE_FLAGS) -O0 -g -fsanitize=address,undefined -fno-omit-frame-position -DBUILD_INSTRUMENT
+	CXXFLAGS := $(BASE_FLAGS) -O0 -g -fsanitize=address,undefined -fno-omit-frame-pointer -DBUILD_INSTRUMENT
 else
 	# Default Debug Target
-	CONFIG   := debug
+	MODE     := debug
 	CXXFLAGS := $(BASE_FLAGS) -O0 -g -DBUILD_DEBUG
 endif
 
@@ -83,9 +88,21 @@ $(foreach src,$(MODULE_SRCS),$(eval $(patsubst $(SRC_DIR)/%.cppm,$(OBJ_DIR)/%.o,
 # Phase execution and meta rules 
 #====================================
 
-.PHONY: all clean docs clean_all bear
+.PHONY: all debug release lto instrument clean docs clean_all bear
 
 all: $(TARGET)
+
+debug:
+	@$(MAKE) MODE=debug all
+
+release:
+	@$(MAKE) MODE=release all
+
+lto:
+	@$(MAKE) MODE=lto all
+
+instrument:
+	@$(MAKE) MODE=instrument all
 
 # The compilation database target: rebuilds with Clang -MJ fragments so
 # module interface units are recorded correctly in compile_commands.json.
@@ -93,7 +110,7 @@ bear:
 	@$(RM) $(COMPDB_FILE)
 	@$(RM) $(BUILD_DIR)
 	@$(MKDIR) $(COMPDB_DIR)
-	@$(MAKE) CONFIG=$(CONFIG) GENERATE_COMPDB=1 all
+	@$(MAKE) MODE=$(MODE) GENERATE_COMPDB=1 all
 	@{ printf '[\n'; find $(COMPDB_DIR) -type f -name '*.json' | sort | xargs -r cat; } | sed '$$s/,$$//' > $(COMPDB_FILE)
 	@printf '\n]\n' >> $(COMPDB_FILE)
 	
@@ -126,7 +143,7 @@ docs:
 	doxygen $(DOXYFILE)
 
 clean:
-	$(RM) build/$(CONFIG)
+	$(RM) build/$(MODE)
 	$(RM) $(TARGET)
 
 clean_all:

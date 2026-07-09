@@ -15,8 +15,20 @@ import core_types;
 import core_string;
 import core_lexer;
 import core_text_parse;
+import core_result;
 
 export namespace base {
+  /**
+   * @brief Failure categories for diagnostic buffer append operations.
+   */
+  enum struct DiagBufferError : u8 {
+    None = 0,
+    NullStorage,
+    BufferFull
+  };
+
+  /** @brief Result alias for diagnostic-buffer append operations. */
+  using DiagBufferPushResult = Result<DiagBufferError, u32>;
 
   /**
    * @brief Caller-owned fixed-capacity diagnostic accumulation buffer.
@@ -37,14 +49,20 @@ export namespace base {
    * @brief Append one diagnostic to a caller-owned diagnostic buffer.
    * @param buffer Diagnostic buffer.
    * @param diag Diagnostic record to append.
-   * @return true when the diagnostic is appended; false if buffer is null/full.
+   * @return Ok(new_count) when the diagnostic is appended, or Err(DiagBufferError)
+   *         when storage is null or capacity is exhausted.
    */
-  constexpr bool diag_buffer_push(DiagBuffer& buffer, ParseDiagnostic diag) {
-    if (buffer.data == nullptr) return false;
-    if (buffer.count >= buffer.capacity) return false;
+  constexpr DiagBufferPushResult diag_buffer_push(DiagBuffer& buffer, ParseDiagnostic diag) {
+    if (buffer.data == nullptr) {
+      return DiagBufferPushResult::err(DiagBufferError::NullStorage);
+    }
+    if (buffer.count >= buffer.capacity) {
+      return DiagBufferPushResult::err(DiagBufferError::BufferFull);
+    }
+    
     buffer.data[buffer.count] = diag;
     buffer.count++;
-    return true;
+    return DiagBufferPushResult::ok(buffer.count);
   }
 
   /**

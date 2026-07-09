@@ -1,7 +1,6 @@
 module; 
 
 #include <stdint.h>
-#include <stddef.h>
 
 /**
  * @file core_types.cppm

@@ -1,13 +1,9 @@
-module;
-// Global module fragment for intrinsics if needed
-#include <limits>
-#include <type_traits>
-
 export module core_text_parse;
 
 import core_types;
 import core_result;
 import core_string;
+import core_portability;
 
 export namespace base {
 
@@ -49,9 +45,9 @@ export namespace base {
    *
    * namespace my_language {
    *
-   *    Str8 resolve_string_literal(Arena* arena, Str8 raw_slice) {
+   *    Str8 resolve_string_literal(Arena& arena, Str8 raw_slice) {
    *        // Pre-allocate worst-case size (the original string length)
-   *        u8* dest = arena_push_array(arena, u8, raw_slice.len);
+   *        u8* dest = arena.alloc_array<u8>(raw_slice.len);
    *        u64 write_idx = 0;
    *
    *        for (u64 i = 0; i < raw_slice.len; ++i) {
@@ -105,6 +101,17 @@ export namespace base {
     u32 line_count;
   };
 
+  /**
+   * @brief Failure categories for line-index construction.
+   */
+  enum struct LineIndexError : u8 {
+    None = 0,
+    InvalidArguments,
+    InsufficientCapacity
+  };
+
+  /** @brief Result alias for building a line index */
+  using LineIndexBuildResult = Result<LineIndexError, LineIndex>;
 
   /**
    * @brief Compute required entry count for a line-start index.
@@ -127,19 +134,19 @@ export namespace base {
    * @param buffer Source buffer.
    * @param out_line_starts Destination storage for line starts.
    * @param capacity Number of writable entries in @p out_line_starts.
-   * @param out_index Receives the built index view.
-   * @return True on success, false for invalid args or insufficient capacity.
+   * @return Ok(LineIndex) on success, or Err(LineIndexError) for invalid arguments
+   *         or insufficient capacity.
    */
-  constexpr bool line_index_build(Str8 buffer, u64* out_line_starts, u32 capacity, LineIndex* out_index) {
-    if (out_line_starts == nullptr || out_index == nullptr || capacity == 0) {
-      return false;
+  constexpr LineIndexBuildResult line_index_build(Str8 buffer, u64* out_line_starts, u32 capacity) {
+    if (out_line_starts == nullptr || capacity == 0) {
+      return LineIndexBuildResult::err(LineIndexError::InvalidArguments);
     }
 
     u32 needed = line_index_required_capacity(buffer);
     if (capacity < needed) {
-      return false;
+      return LineIndexBuildResult::err(LineIndexError::InsufficientCapacity);
     }
-
+    
     u32 write = 0;
     out_line_starts[write++] = 0;   // line 1 always starts at offset 0
 
@@ -149,9 +156,7 @@ export namespace base {
       }
     }
 
-    out_index->line_starts = out_line_starts;
-    out_index->line_count = write;
-    return true;
+    return LineIndexBuildResult::ok(LineIndex{out_line_starts, write});
   }
 
   /**
@@ -193,9 +198,9 @@ export namespace base {
   template <typename T> 
   using ParseResult = Result<ParseDiagCode, T>;
 
-  static_assert(std::is_standard_layout_v<ParseDiagnostic>, 
+  static_assert(portability::is_standard_layout_v<ParseDiagnostic>, 
                 "ParseDiagnostic must remain standard layout.");
-  static_assert(std::is_trivially_copyable_v<ParseDiagnostic>, 
+  static_assert(portability::is_trivially_copyable_v<ParseDiagnostic>, 
                 "ParseDiagnostic must remain trivially copyable.");
 
   constexpr SourceLocation compute_location(Str8 buffer, u64 offset) {
@@ -243,8 +248,8 @@ export namespace base {
     u32 line_idx = (lo == 0) ? 0 : (lo - 1);
     u64 line_start = index.line_starts[line_idx];
     u64 col64 = (clamped - line_start) + 1;
-    u32 column = (col64 > static_cast<u64>(std::numeric_limits<u32>::max()))
-                    ? std::numeric_limits<u32>::max()
+    u32 column = (col64 > static_cast<u64>(portability::numeric_limits<u32>::max()))
+                    ? portability::numeric_limits<u32>::max()
                     : static_cast<u32>(col64);
     return {line_idx + 1, column};
   } 
@@ -298,7 +303,7 @@ export namespace base {
     bool is_negative = false;
 
     // compile time branch: check sign handling only if type is signed
-    if (std::is_signed_v<T>) {
+    if (base::portability::is_signed_v<T>) {
       if (text.str[0] == '-') {
         is_negative = true;
         i++;
@@ -310,7 +315,7 @@ export namespace base {
     if (i == text.len) return ParseResult<T>::err(ParseDiagCode::NoDigits);
 
     // Accumulate in unsigned space first; signed range checks happen once.
-    using UnsignedT = std::make_unsigned_t<T>;
+    using UnsignedT = portability::make_unsigned_t<T>;
     UnsignedT result = 0;
 
     for (; i < text.len; ++i) {
@@ -321,7 +326,7 @@ export namespace base {
       UnsignedT digit = c - '0';
 
       // Pre-multiply overflow check: result * 10 + digit must stay representable.
-      if (result > (std::numeric_limits<UnsignedT>::max() - digit) / 10) {
+      if (result > (portability::numeric_limits<UnsignedT>::max() - digit) / 10) {
         return ParseResult<T>::err(ParseDiagCode::IntOverflow);
       }
       result = result * 10 + digit;
@@ -329,8 +334,8 @@ export namespace base {
 
     // Final sign application and target-range validation
     // Portability safe path: never cast an out-of-range unsigned magnitude to signed.
-    if constexpr (std::is_signed_v<T>) {
-      const UnsignedT max_pos = static_cast<UnsignedT>(std::numeric_limits<T>::max());
+    if constexpr (portability::is_signed_v<T>) {
+      const UnsignedT max_pos = static_cast<UnsignedT>(portability::numeric_limits<T>::max());
       const UnsignedT max_neg_mag = max_pos + 1;  // |T::min()|
 
       if (is_negative) {
@@ -338,7 +343,7 @@ export namespace base {
           return ParseResult<T>::err(ParseDiagCode::IntOverflow);
         }
         if (result == max_neg_mag) {
-          return ParseResult<T>::ok(std::numeric_limits<T>::min());
+          return ParseResult<T>::ok(portability::numeric_limits<T>::min());
         }
 
         // result <= max_pos, so cast to T is representable
@@ -447,7 +452,7 @@ export namespace base {
       u32 exp_val = 0;
       while (i < text.len && text.str[i] >= '0' && text.str[i] <= '9') {
         u32 digit = static_cast<u32>(text.str[i] - '0');
-        if (exp_val > (std::numeric_limits<u32>::max() - digit) / 10) {
+        if (exp_val > (portability::numeric_limits<u32>::max() - digit) / 10) {
           return ParseResult<f64>::err(ParseDiagCode::ExponentOverflow);
         }
         exp_val = exp_val * 10 + (text.str[i] - '0');

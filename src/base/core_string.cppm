@@ -1,6 +1,6 @@
 module;
-#include <cstdarg>
-#include <cstring>
+#include <stdarg.h>
+#include <string.h>
 #include <stdio.h>
 
 /**
@@ -16,13 +16,27 @@ export module core_string;
 
 import core_types;
 import core_memory;
-// import core_result;
+import core_result;
 
 /**
  * @namespace base
  * @brief Shared low-level string and memory utilities.
  */
 export namespace base {
+
+  /**
+   * @brief Failure categories for arena-backed string formatting.
+   */  
+  enum struct StringFormatError : u8 {
+    None = 0,
+    FormatFailed,
+    OutOfMemory,
+    Truncated
+  };
+
+  struct Str8;
+  using StringFormatResult = Result<StringFormatError, Str8>;
+
   /**
    * @brief Non-owning UTF-8 byte-string view.
    * @note The view is not null-terminated by contract.
@@ -80,6 +94,8 @@ export namespace base {
     }
   };
 
+
+
   /** @brief Singly linked node containing one Str8 segment. */
   struct Str8Node {
     /** @brief Next node in list, or null at tail. */
@@ -108,9 +124,9 @@ export namespace base {
      * @param string Segment to append.
      * @post node_count increments when string is non-empty.
      */
-    void push(Arena* scratch_arena, Str8 string) {
+    void push(Arena& scratch_arena, Str8 string) {
       if (string.len == 0) return;
-      Str8Node* node = scratch_arena->alloc_struct<Str8Node>();
+      Str8Node* node = scratch_arena.alloc_struct<Str8Node>();
       BASE_ASSERT(node != nullptr);
 
       node->string = string;
@@ -136,11 +152,11 @@ export namespace base {
    * @return Joined string view; empty view if input is empty.
    * @post Returned memory is owned by \p permanent_arena.
    */
-  Str8 str8_list_join(Arena* permanent_arena, Str8List list) {
+  Str8 str8_list_join(Arena& permanent_arena, Str8List list) {
     if (list.total_len == 0) return Str8{};
 
     // One single allocation for the entire compound string
-    u8* buffer = permanent_arena->alloc_array<u8>(list.total_len);
+    u8* buffer = permanent_arena.alloc_array<u8>(list.total_len);
     BASE_ASSERT(buffer != nullptr);
 
     u64 write_offset = 0;
@@ -154,38 +170,108 @@ export namespace base {
   }
 
   /**
-   * @brief Appends formatted text into arena memory and returns it as Str8.
+   * @brief Formats text into arena memory using exact two-pass sizing.
    * @param arena Arena used to allocate destination bytes.
    * @param format Printf-style format string.
-   * @param ... Format arguments.
-   * @return Formatted string view, excluding trailing null terminator.
-   * @post Returned memory is owned by \p arena.
+   * @param args Active vararg list.
+   * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
    */
-  Str8 str8_pushf(Arena* arena, const char* format, ...) {
-    va_list args;
+  StringFormatResult str8_vpushf(Arena& arena, const char* format, va_list args) {
+    va_list count_args;
+    va_copy(count_args, args);
+    i32 formal_len = vsnprintf(nullptr, 0, format, count_args);
+    va_end(count_args);
 
-    // Query exact space required by running a dry run
-    va_start(args,format);
-    i32 formal_len = vsnprintf(nullptr, 0, format, args);
-    va_end(args);
+    if (formal_len < 0) {
+      return StringFormatResult::err(StringFormatError::FormatFailed);
+    }
 
-    if (formal_len <= 0) return Str8{};
     u64 safe_len = static_cast<u64>(formal_len);
+    if (safe_len == 0) {
+      return StringFormatResult::ok(Str8{});
+    }
 
-    // Allocate the exact destination block right out of the arena
-    u8* buffer = arena->alloc_array<u8>(safe_len + 1);  // +1 for the 
-                                                        // null terminator safety
-                                                        // inside C functions
-    BASE_ASSERT(buffer != nullptr);
-    
-    // Format directly into the freshly bumped arena memory segment
+    u64 snapshot = arena.offset;
+    u8* buffer = arena.alloc_array<u8>(safe_len + 1); // +1: null terminator safety
+    if (!buffer) {
+      return StringFormatResult::err(StringFormatError::OutOfMemory);
+    }
+
+    va_list write_args;
+    va_copy(write_args, args);
+    i32 written_len = vsnprintf(reinterpret_cast<char*>(buffer), static_cast<size_t>(safe_len + 1), format, write_args);
+    va_end(write_args);
+
+    if (written_len < 0 || static_cast<u64>(written_len) != safe_len) {
+      arena.offset = snapshot;
+      return StringFormatResult::err(StringFormatError::FormatFailed);
+    }
+
+    return StringFormatResult::ok(Str8{buffer, safe_len});
+  }
+
+
+  /**
+   * @brief Formats text into arena memory with caller-provided capacity cap.
+   * @param arena Arena used to allocate destination bytes.
+   * @param cap Maximum payload bytes (excluding null terminator safety byte).
+   * @param format Printf-style format string.
+   * @param args Active vararg list.
+   * @return Ok(Str8) on success, or Err(StringFormatError) for format failure,
+   *         out-of-memory, or truncation.
+   */
+  StringFormatResult str8_vpush_cap(Arena& arena, u64 cap, const char* format, va_list args) {
+    if (cap == 0) {
+      return StringFormatResult::ok(Str8{});
+    }
+
+    u64 snapshot = arena.offset;
+    u8* buffer = arena.alloc_array<u8>(cap + 1); // +1 for null terminator safety
+    if (!buffer) {
+      return StringFormatResult::err(StringFormatError::OutOfMemory);
+    }
+
+    va_list write_args;
+    va_copy(write_args, args);
+    i32 written_len = vsnprintf(reinterpret_cast<char*>(buffer), static_cast<size_t>(cap + 1), format, write_args);
+    va_end(write_args);
+
+    if (written_len < 0) {
+      arena.offset = snapshot;
+      return StringFormatResult::err(StringFormatError::FormatFailed);
+    }
+
+    u64 written_u64 = static_cast<u64>(written_len);
+
+    // vsnprintf returns full required length on truncation.
+    if (written_u64 > cap) {
+      arena.offset = snapshot;
+      return StringFormatResult::err(StringFormatError::Truncated);
+    }
+
+    if (written_u64 == 0) {
+      arena.offset = snapshot;
+      return StringFormatResult::ok(Str8{});
+    }
+
+    arena.offset = snapshot + written_u64; // trim to exact payload bytes
+    return StringFormatResult::ok(Str8{buffer, written_u64});
+  }
+
+  /**
+   * @brief Formats text into arena memory using caller-provided capacity cap.
+   * @param arena Arena used to allocate destination bytes.
+   * @param cap Maximum payload bytes (excluding null terminator safety byte).
+   * @param format Printf-style format string.
+   * @param ... Format arguments.
+   * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
+   */
+  StringFormatResult str8_push_cap(Arena& arena, u64 cap, const char* format, ...) {
+    va_list args;
     va_start(args, format);
-    vsnprintf(reinterpret_cast<char*>(buffer), safe_len + 1, format, args);
+    StringFormatResult result = str8_vpush_cap(arena, cap, format, args);
     va_end(args);
-
-    // Return the view tracking the explicit characters, omitting the
-    // trailing null byte
-    return Str8(buffer, safe_len);
+    return result;
   }
 
   /**
