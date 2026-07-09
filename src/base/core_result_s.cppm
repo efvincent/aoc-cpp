@@ -4,6 +4,8 @@ import core_types;
 import core_result;
 import core_string;
 
+using namespace base;
+
 export namespace base {
 
 // -----------------------------------------------------------------------------
@@ -11,9 +13,9 @@ export namespace base {
 // -----------------------------------------------------------------------------
 
 // The MSB mask: 10000000 00000000 ...
-constexpr base::u64 RESULT_OK_BIT = 0x8000000000000000ull;
+constexpr u64 RESULT_OK_BIT = 0x8000000000000000ull;
 // The Length mask: 01111111 11111111 ...
-constexpr base::u64 RESULT_LEN_MASK = 0x7FFFFFFFFFFFFFFFull;
+constexpr u64 RESULT_LEN_MASK = 0x7FFFFFFFFFFFFFFFull;
 
 template <typename T>
 struct ResultS {
@@ -47,7 +49,7 @@ struct ResultS {
     return res;
   }
 
-  constexpr static ResultS err(base::Str8 err_str) {
+  constexpr static ResultS err(Str8 err_str) {
     ResultS res = {};
     res.error.str = err_str.str;
     // Ensure the top bit is '0', leaving the raw string length perfectly intact

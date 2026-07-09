@@ -17,6 +17,9 @@ import core_lexer;
 import core_text_parse;
 import core_result;
 
+using namespace base;
+using namespace parse;
+
 export namespace base::lex {
   /**
    * @brief Failure categories for diagnostic buffer append operations.
@@ -38,7 +41,7 @@ export namespace base::lex {
    */
   struct DiagBuffer {
     /** @brief Destination storage for diagnostics. */
-    base::parse::ParseDiagnostic* data;
+    ParseDiagnostic* data;
     /** @brief Number of populated entries in @ref data. */
     u32 count;
     /** @brief Maximum writable entries in @ref data. */
@@ -52,7 +55,7 @@ export namespace base::lex {
    * @return Ok(new_count) when the diagnostic is appended, or Err(DiagBufferError)
    *         when storage is null or capacity is exhausted.
    */
-  constexpr DiagBufferPushResult diag_buffer_push(DiagBuffer& buffer, base::parse::ParseDiagnostic diag) {
+  constexpr DiagBufferPushResult diag_buffer_push(DiagBuffer& buffer, ParseDiagnostic diag) {
     if (buffer.data == nullptr) {
       return DiagBufferPushResult::err(DiagBufferError::NullStorage);
     }
@@ -79,12 +82,12 @@ export namespace base::lex {
    */
   template <typename T>
   constexpr ParseResult<T> coord_consume_int(Str8Cursor& cursor,
-                                             ParseResult<T> (*parser)(base::str::Str8),
+                                             ParseResult<T> (*parser)(str::Str8),
                                              DiagBuffer& diags) {
     u64 start = cursor.offset;
     ParseResult<T> res = cursor.consume_int_impl<T>(parser);
     if (!res.is_ok() && cursor.offset > start) {
-      base::parse::ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
+      ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
       (void)diag_buffer_push(diags, diag);
     }
     return res;
@@ -92,42 +95,42 @@ export namespace base::lex {
 
   /** @brief Coordinator wrapper for consuming `u8` with diagnostic emission. */
   constexpr ParseResult<u8> coord_consume_u8(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<u8>(cursor, base::parse::parse_u8, diags);
+    return coord_consume_int<u8>(cursor, parse_u8, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `i8` with diagnostic emission. */
   constexpr ParseResult<i8> coord_consume_i8(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<i8>(cursor, base::parse::parse_i8, diags);
+    return coord_consume_int<i8>(cursor, parse_i8, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `u16` with diagnostic emission. */
   constexpr ParseResult<u16> coord_consume_u16(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<u16>(cursor, base::parse::parse_u16, diags);
+    return coord_consume_int<u16>(cursor, parse_u16, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `i16` with diagnostic emission. */
   constexpr ParseResult<i16> coord_consume_i16(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<i16>(cursor, base::parse::parse_i16, diags);
+    return coord_consume_int<i16>(cursor, parse_i16, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `u32` with diagnostic emission. */
   constexpr ParseResult<u32> coord_consume_u32(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<u32>(cursor, base::parse::parse_u32, diags);
+    return coord_consume_int<u32>(cursor, parse_u32, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `i32` with diagnostic emission. */
   constexpr ParseResult<i32> coord_consume_i32(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<i32>(cursor, base::parse::parse_i32, diags);
+    return coord_consume_int<i32>(cursor, parse_i32, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `u64` with diagnostic emission. */
   constexpr ParseResult<u64> coord_consume_u64(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<u64>(cursor, base::parse::parse_u64, diags);
+    return coord_consume_int<u64>(cursor, parse_u64, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `i64` with diagnostic emission. */
   constexpr ParseResult<i64> coord_consume_i64(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<i64>(cursor, base::parse::parse_i64, diags);
+    return coord_consume_int<i64>(cursor, parse_i64, diags);
   }
 
   /**
@@ -139,7 +142,7 @@ export namespace base::lex {
     u64 start = cursor.offset;
     ParseResult<f64> res = cursor.consume_f64();
     if (!res.is_ok() && cursor.offset > start) {
-      base::parse::ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
+      ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
       (void)diag_buffer_push(diags, diag);
     }
     return res;
@@ -169,7 +172,7 @@ export namespace base::lex {
     u64 start = cursor.offset;
     ParseResult<u64> res = cursor.parse_string_literal();
     if (!res.is_ok() && cursor.offset > start) {
-      base::parse::ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
+      ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
       (void)diag_buffer_push(diags, diag);
     }
     return res;
@@ -215,8 +218,8 @@ export namespace base::lex {
         }
 
         if (depth > 0) {
-          auto code = base::parse::ParseDiagCode::UnterminatedBlockComment;
-          base::parse::ParseDiagnostic diag = make_error_diag(code, block_start_offset, cursor.offset);
+          auto code = ParseDiagCode::UnterminatedBlockComment;
+          ParseDiagnostic diag = make_error_diag(code, block_start_offset, cursor.offset);
           (void)diag_buffer_push(diags, diag);
           return ParseResult<u8>::err(code);
         }

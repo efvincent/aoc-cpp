@@ -19,6 +19,9 @@ import core_string;
 import core_memory;
 import core_result;
 
+using namespace base;
+using namespace str;
+
 /**
  * @namespace base::console
  * @brief Low-level console IO utilities.
@@ -52,7 +55,7 @@ export namespace base::console {
   using ConsoleWriteResult = Result<ConsoleWriteError, u64>;
 
   /** @brief Result alias for console line reads. */
-  using ConsoleReadResult = Result<ConsoleError, base::str::Str8>;
+  using ConsoleReadResult = Result<ConsoleError, Str8>;
   
   // ==========================================================================
   // Output
@@ -61,8 +64,8 @@ export namespace base::console {
     /**
    * @brief Maps string formatting errors to console write errors.
    */
-  constexpr ConsoleWriteError map_string_error_to_console(base::str::StringFormatError e) {
-    using enum base::str::StringFormatError;
+  constexpr ConsoleWriteError map_string_error_to_console(StringFormatError e) {
+    using enum StringFormatError;
     switch(e) {
       case FormatFailed: return ConsoleWriteError::FormatFailed;
       case OutOfMemory:  return ConsoleWriteError::OutOfMemory;
@@ -76,7 +79,7 @@ export namespace base::console {
    * @param text Bytes to write.
    * @return Ok(bytes_written) or Err(ConsoleWriteError::StdoutWriteFailed).
    */
-  inline ConsoleWriteResult write_stdout(base::str::Str8 text) {
+  inline ConsoleWriteResult write_stdout(Str8 text) {
     if (text.len == 0) return ConsoleWriteResult::ok(0);
     u64 written = static_cast<u64>(fwrite(text.str, 1, text.len, stdout));
     if (written != text.len) {
@@ -90,7 +93,7 @@ export namespace base::console {
    * @param text Bytes to write.
    * @return Ok(bytes_written) or Err(ConsoleWriteError::StderrWriteFailed).
    */
-  inline ConsoleWriteResult write_stderr(base::str::Str8 text) {
+  inline ConsoleWriteResult write_stderr(Str8 text) {
     if (text.len == 0) return ConsoleWriteResult::ok(0);
     u64 written = static_cast<u64>(fwrite(text.str, 1, text.len, stderr));
     if (written != text.len) {
@@ -117,10 +120,10 @@ export namespace base::console {
    * @param ... Format arguments.
    * @return Ok(total_bytes_written) or Err(ConsoleWriteError).
    */
-  inline ConsoleWriteResult printfl(base::mem::Arena& arena, const char* format, ...) {
+  inline ConsoleWriteResult printfl(mem::Arena& arena, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    base::str::StringFormatResult fmt = base::str::vpushf(arena, format, args);
+    StringFormatResult fmt = vpushf(arena, format, args);
     va_end(args);
 
     if (!fmt.is_ok()) {
@@ -130,7 +133,7 @@ export namespace base::console {
     auto w = write_stdout(fmt.value);
     if (!w.is_ok()) return ConsoleWriteResult::err(w.error);
 
-    auto n = write_stdout(base::str::Str8("\n"));
+    auto n = write_stdout(Str8("\n"));
     if (!n.is_ok()) return ConsoleWriteResult::err(n.error);
 
     auto f = flush_stdout_checked();
@@ -147,10 +150,10 @@ export namespace base::console {
    * @param ... Format arguments.
    * @return Ok(total_bytes_written) or Err(ConsoleWriteError).
    */
-  inline ConsoleWriteResult printfl_cap(base::mem::Arena& arena, u64 cap, const char* format, ...) {
+  inline ConsoleWriteResult printfl_cap(mem::Arena& arena, u64 cap, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    base::str::StringFormatResult fmt = base::str::vpush_cap(arena, cap, format, args);
+    StringFormatResult fmt = vpush_cap(arena, cap, format, args);
     va_end(args);
 
     if (!fmt.is_ok()) {
@@ -160,7 +163,7 @@ export namespace base::console {
     auto w = write_stdout(fmt.value);
     if (!w.is_ok()) return ConsoleWriteResult::err(w.error);
 
-    auto n = write_stdout(base::str::Str8("\n"));
+    auto n = write_stdout(Str8("\n"));
     if (!n.is_ok()) return ConsoleWriteResult::err(n.error);
 
     auto f = flush_stdout_checked();
@@ -177,10 +180,10 @@ export namespace base::console {
    * @param ... Format arguments.
    * @return Ok(total_bytes_written) or Err(ConsoleWriteError).
    */
-  inline ConsoleWriteResult eprintfl_cap(base::mem::Arena& arena, u64 cap, const char* format, ...) {
+  inline ConsoleWriteResult eprintfl_cap(mem::Arena& arena, u64 cap, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    base::str::StringFormatResult fmt = base::str::vpush_cap(arena, cap, format, args);
+    StringFormatResult fmt = vpush_cap(arena, cap, format, args);
     va_end(args);
 
     if (!fmt.is_ok()) {
@@ -190,7 +193,7 @@ export namespace base::console {
     auto w = write_stderr(fmt.value);
     if (!w.is_ok()) return ConsoleWriteResult::err(w.error);
 
-    auto n = write_stderr(base::str::Str8("\n"));
+    auto n = write_stderr(Str8("\n"));
     if (!n.is_ok()) return ConsoleWriteResult::err(n.error);
 
     return ConsoleWriteResult::ok(fmt.value.len + 1);
@@ -200,7 +203,7 @@ export namespace base::console {
    * @brief Writes raw text to stdout without appending a newline.
    * @param text UTF-8 byte slice to write.
    */
-  inline void print(base::str::Str8 text) {
+  inline void print(Str8 text) {
     (void)write_stdout(text);
   }
 
@@ -208,10 +211,10 @@ export namespace base::console {
    * @brief Writes text to stdout followed by a newline.
    * @param text UTF-8 byte slice to write.
    */
-  inline void printl(base::str::Str8 text) {
+  inline void printl(Str8 text) {
     auto _w = write_stdout(text);
     if (!_w.is_ok()) return;
-    auto _n = write_stdout(base::str::Str8("\n"));
+    auto _n = write_stdout(Str8("\n"));
     if (!_n.is_ok()) return;
     (void)flush_stdout_checked();
   }
@@ -228,9 +231,9 @@ export namespace base::console {
    * @brief Writes text to stderr and always appends a newline.
    * @param text UTF-8 byte slice to write.
    */
-  inline void print_err(base::str::Str8 text) {
+  inline void print_err(base::Str8 text) {
     (void)write_stderr(text);
-    (void)write_stderr(base::str::Str8("\n"));
+    (void)write_stderr(base::Str8("\n"));
   }
 
   // ==========================================================================
@@ -280,7 +283,7 @@ export namespace base::console {
 
     if (len == 0) {
       arena.offset = snapshot;
-      return ConsoleReadResult::ok(base::str::Str8{});
+      return ConsoleReadResult::ok(base::Str8{});
     }
 
     if (!found_newline && !found_null && len == max_bytes - 1 && !feof(stdin)) {
@@ -289,7 +292,7 @@ export namespace base::console {
     }
 
     arena.offset -= (max_bytes - len);
-    return ConsoleReadResult::ok(base::str::Str8(buffer, len));
+    return ConsoleReadResult::ok(base::Str8(buffer, len));
   }
 
 }   // namespace base::console

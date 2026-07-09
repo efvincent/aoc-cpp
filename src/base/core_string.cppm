@@ -18,6 +18,9 @@ import core_types;
 import core_memory;
 import core_result;
 
+using namespace base;
+using namespace mem;
+
 /**
  * @namespace base::str
  * @brief String and formatting primitives for the base layer.
@@ -124,7 +127,7 @@ export namespace base::str {
      * @param string Segment to append.
      * @post node_count increments when string is non-empty.
      */
-    void push(base::mem::Arena& scratch_arena, Str8 string) {
+    void push(Arena& scratch_arena, Str8 string) {
       if (string.len == 0) return;
       Str8Node* node = scratch_arena.alloc_struct<Str8Node>();
       BASE_ASSERT(node != nullptr);
@@ -152,7 +155,7 @@ export namespace base::str {
    * @return Joined string view; empty view if input is empty.
    * @post Returned memory is owned by \p permanent_arena.
    */
-  Str8 list_join(base::mem::Arena& permanent_arena, Str8List list) {
+  Str8 list_join(Arena& permanent_arena, Str8List list) {
     if (list.total_len == 0) return Str8{};
 
     // One single allocation for the entire compound string
@@ -176,7 +179,7 @@ export namespace base::str {
    * @param args Active vararg list.
    * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
    */
-  StringFormatResult vpushf(base::mem::Arena& arena, const char* format, va_list args) {
+  StringFormatResult vpushf(Arena& arena, const char* format, va_list args) {
     va_list count_args;
     va_copy(count_args, args);
     i32 formal_len = vsnprintf(nullptr, 0, format, count_args);
@@ -220,7 +223,7 @@ export namespace base::str {
    * @return Ok(Str8) on success, or Err(StringFormatError) for format failure,
    *         out-of-memory, or truncation.
    */
-  StringFormatResult vpush_cap(base::mem::Arena& arena, u64 cap, const char* format, va_list args) {
+  StringFormatResult vpush_cap(Arena& arena, u64 cap, const char* format, va_list args) {
     if (cap == 0) {
       return StringFormatResult::ok(Str8{});
     }
@@ -265,7 +268,7 @@ export namespace base::str {
    * @param ... Format arguments.
    * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
    */
-  StringFormatResult pushf(base::mem::Arena& arena, const char* format, ...) {
+  StringFormatResult pushf(Arena& arena, const char* format, ...) {
     va_list args;
     va_start(args, format);
     StringFormatResult result = vpushf(arena, format, args);
@@ -281,7 +284,7 @@ export namespace base::str {
    * @param ... Format arguments.
    * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
    */
-  StringFormatResult push_cap(base::mem::Arena& arena, u64 cap, const char* format, ...) {
+  StringFormatResult push_cap(Arena& arena, u64 cap, const char* format, ...) {
     va_list args;
     va_start(args, format);
     StringFormatResult result = vpush_cap(arena, cap, format, args);
@@ -309,9 +312,9 @@ export namespace base::str {
    * @return 64-bit hash value.
    * @note Hash is stable for identical byte sequences.
    */
-  constexpr base::u64 hash_fnv1a(Str8 string) {
-    base::u64 hash = 14695981039346656037ULL;
-    for (base::u64 i = 0; i < string.len; ++i) {
+  constexpr u64 hash_fnv1a(Str8 string) {
+    u64 hash = 14695981039346656037ULL;
+    for (u64 i = 0; i < string.len; ++i) {
         hash ^= string.str[i];
         hash *= 1099511628211ULL;
     }

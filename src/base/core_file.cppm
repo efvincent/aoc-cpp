@@ -18,11 +18,14 @@ import core_string;
 import core_memory;
 import core_result;
 
+using namespace base;
+using namespace base::str;
+
 /**
  * @namespace base::fs
  * @brief Arena-friendly file IO utilities.
  */
-export namespace base::fs {
+export namespace fs {
   // ------------------------------------------------------------
   // File Diagnostics
   // ------------------------------------------------------------
@@ -38,7 +41,7 @@ export namespace base::fs {
   };
 
   /** @brief Result alias for file reads (error or byte slice). */
-  using FileReadResult = Result<FileError, base::str::Str8>;
+  using FileReadResult = Result<FileError, Str8>;
   /** @brief Result alias for file writes (error or bytes written). */
   using FileWriteResult = Result<FileError, u64>;
 
@@ -52,7 +55,7 @@ export namespace base::fs {
    * @param filepath Null-terminated path to open.
    * @return Ok(Str8) on success, Err(FileError) on failure.
    */
-  FileReadResult read_all(base::mem::Arena& arena, const char* filepath) {
+  FileReadResult read_all(mem::Arena& arena, const char* filepath) {
     // Open in binary mode to avoid newline translation.
     FILE* file = fopen(filepath, "rb");
     if (!file) {
@@ -70,7 +73,7 @@ export namespace base::fs {
     // Empty file is a valid state, not an error
     if (file_size == 0) {
       fclose(file);
-      return FileReadResult::ok(base::str::Str8{});
+      return FileReadResult::ok(Str8{});
     }
 
     u64 file_size_u64 = static_cast<u64>(file_size);
@@ -90,7 +93,7 @@ export namespace base::fs {
       return FileReadResult::err(FileError::ReadFailed);
     }
 
-    return FileReadResult::ok(base::str::Str8(buffer, bytes_read));
+    return FileReadResult::ok(Str8(buffer, bytes_read));
   }
 
   // ------------------------------------------------------------
@@ -103,7 +106,7 @@ export namespace base::fs {
    * @param data Byte slice to persist.
    * @return Ok(bytes_written) on success, Err(FileError) on failure.
    */
-  FileWriteResult write_all(const char* filepath, base::str::Str8 data) {
+  FileWriteResult write_all(const char* filepath, Str8 data) {
     FILE* file = fopen(filepath, "wb");
     if (!file) {
       return FileWriteResult::err(FileError::NotFoundOrLocked);

@@ -5,6 +5,9 @@ import core_result;
 import core_string;
 import core_portability;
 
+using namespace base;
+using namespace str;
+
 export namespace base::parse {
   /**
    * @defgroup StringResolution Zero-Allocation String Parsing
@@ -118,7 +121,7 @@ export namespace base::parse {
    *
    * Always returns at least 1 (line 1 at offset 0).
    */
-  constexpr u32 line_index_required_capacity(base::str::Str8 buffer) {
+  constexpr u32 line_index_required_capacity(Str8 buffer) {
     u32 lines = 1;
     for(u64 i = 0; i < buffer.len; ++i) {
       if (buffer.str[i] == '\n') {
@@ -137,7 +140,7 @@ export namespace base::parse {
    * @return Ok(LineIndex) on success, or Err(LineIndexError) for invalid arguments
    *         or insufficient capacity.
    */
-  constexpr LineIndexBuildResult line_index_build(base::str::Str8 buffer, u64* out_line_starts, u32 capacity) {
+  constexpr LineIndexBuildResult line_index_build(Str8 buffer, u64* out_line_starts, u32 capacity) {
     if (out_line_starts == nullptr || capacity == 0) {
       return LineIndexBuildResult::err(LineIndexError::InvalidArguments);
     }
@@ -203,10 +206,10 @@ export namespace base::parse {
   static_assert(portability::is_trivially_copyable_v<ParseDiagnostic>, 
                 "ParseDiagnostic must remain trivially copyable.");
 
-  constexpr SourceLocation compute_location(base::str::Str8 buffer, u64 offset) {
+  constexpr SourceLocation compute_location(Str8 buffer, u64 offset) {
     u32 line = 1;
     u32 col = 1;
-    u64 limit = base::Min(offset, buffer.len);
+    u64 limit = Min(offset, buffer.len);
     
     for (u64 i = 0; i < limit; ++i) {
       if (buffer.str[i] == '\n') {
@@ -281,14 +284,14 @@ export namespace base::parse {
    * @return Parsed integer or error when invalid/empty/overflowing.
    */
   template <typename T>
-  constexpr ParseResult<T> parse_int_impl(base::str::Str8 text) {
+  constexpr ParseResult<T> parse_int_impl(Str8 text) {
     if (text.len == 0) return ParseResult<T>::err(ParseDiagCode::EmptyInput);
 
     u64 i = 0;
     bool is_negative = false;
 
     // compile time branch: check sign handling only if type is signed
-    if (base::portability::is_signed_v<T>) {
+    if (portability::is_signed_v<T>) {
       if (text.str[0] == '-') {
         is_negative = true;
         i++;
@@ -345,21 +348,21 @@ export namespace base::parse {
   }
 
   /** @brief Parse `Str8` into `u8`. */
-  constexpr ParseResult<u8>  parse_u8(base::str::Str8 t)  { return parse_int_impl<u8>(t); }
+  constexpr ParseResult<u8>  parse_u8(Str8 t)  { return parse_int_impl<u8>(t); }
   /** @brief Parse `Str8` into `i8`. */
-  constexpr ParseResult<i8>  parse_i8(base::str::Str8 t)  { return parse_int_impl<i8>(t); }
+  constexpr ParseResult<i8>  parse_i8(Str8 t)  { return parse_int_impl<i8>(t); }
   /** @brief Parse `Str8` into `u16`. */
-  constexpr ParseResult<u16> parse_u16(base::str::Str8 t) { return parse_int_impl<u16>(t); }
+  constexpr ParseResult<u16> parse_u16(Str8 t) { return parse_int_impl<u16>(t); }
   /** @brief Parse `Str8` into `i16`. */
-  constexpr ParseResult<i16> parse_i16(base::str::Str8 t) { return parse_int_impl<i16>(t); }
+  constexpr ParseResult<i16> parse_i16(Str8 t) { return parse_int_impl<i16>(t); }
   /** @brief Parse `Str8` into `u32`. */
-  constexpr ParseResult<u32> parse_u32(base::str::Str8 t) { return parse_int_impl<u32>(t); }
+  constexpr ParseResult<u32> parse_u32(Str8 t) { return parse_int_impl<u32>(t); }
   /** @brief Parse `Str8` into `i32`. */
-  constexpr ParseResult<i32> parse_i32(base::str::Str8 t) { return parse_int_impl<i32>(t); }
+  constexpr ParseResult<i32> parse_i32(Str8 t) { return parse_int_impl<i32>(t); }
   /** @brief Parse `Str8` into `u64`. */
-  constexpr ParseResult<u64> parse_u64(base::str::Str8 t) { return parse_int_impl<u64>(t); }
+  constexpr ParseResult<u64> parse_u64(Str8 t) { return parse_int_impl<u64>(t); }
   /** @brief Parse `Str8` into `i64`. */
-  constexpr ParseResult<i64> parse_i64(base::str::Str8 t) { return parse_int_impl<i64>(t); }  
+  constexpr ParseResult<i64> parse_i64(Str8 t) { return parse_int_impl<i64>(t); }  
 
 
   //-------------------------------------------------------------
@@ -378,7 +381,7 @@ export namespace base::parse {
    * @note This function is strict over the passed slice only. Error accumulation
    *       and continued parsing across a full buffer are coordinator-layer tasks.
    */
-  constexpr ParseResult<f64> parse_f64(base::str::Str8 text) {
+  constexpr ParseResult<f64> parse_f64(Str8 text) {
     if (text.len == 0) {
       return ParseResult<f64>::err(ParseDiagCode::EmptyInput);
     }
@@ -484,7 +487,7 @@ export namespace base::parse {
    * @param text Input byte slice.
    * @return Parsed `f32` or forwarded parse error.
    */
-  constexpr ParseResult<f32> parse_f32(base::str::Str8 text) {
+  constexpr ParseResult<f32> parse_f32(Str8 text) {
     auto res = parse_f64(text);
     if (!res.is_ok()) {
       return ParseResult<f32>::err(res.error);

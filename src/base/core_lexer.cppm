@@ -6,9 +6,13 @@ import core_result;
 import core_text_parse;
 import core_portability;
 
+using namespace base;
+using namespace str;
+using namespace parse;
+
 export namespace base::lex {
   template <typename T>
-  using ParseResult = base::parse::ParseResult<T>;
+  using ParseResult = ParseResult<T>;
 
   /**
    * @defgroup LexerCore Zero-Allocation Lexer Primitives
@@ -81,7 +85,7 @@ export namespace base::lex {
    */
   struct Token {
     /** @brief Raw token bytes in the original buffer. */
-    base::str::Str8 text;
+    Str8 text;
     /** @brief Token classification for dispatch. */
     TokenType type;
   };
@@ -89,12 +93,10 @@ export namespace base::lex {
   /**
    * @brief Build an error diagnostic over a consumed source window. 
    */
-  constexpr base::parse::ParseDiagnostic make_error_diag(base::parse::ParseDiagCode code,
-                                                         u64 start_offset,
-                                                         u64 end_offset) {
-    return base::parse::ParseDiagnostic{
+  constexpr ParseDiagnostic make_error_diag(ParseDiagCode code, u64 start_offset, u64 end_offset) {
+    return ParseDiagnostic{
       code,
-      base::parse::DiagnosticSeverity::Error,
+      DiagnosticSeverity::Error,
       start_offset,
       end_offset
     };
@@ -109,7 +111,7 @@ export namespace base::lex {
    */
   struct Str8Cursor {
     /** @brief Borrowed input buffer. */
-    base::str::Str8 input;
+    Str8 input;
     /** @brief Current byte offset in `input`. */
     u64 offset;
 
@@ -180,10 +182,10 @@ export namespace base::lex {
      * @return Borrowed identifier slice, or empty slice if no identifier starts
      *         at the current position.
      */
-    constexpr base::str::Str8 parse_ident() {
+    constexpr Str8 parse_ident() {
       // Guard against null-base pointer arithmetic for empty/null input slices
       if (this->input.str == nullptr || this->input.len == 0) {
-        return base::str::Str8(nullptr, 0);
+        return Str8(nullptr, 0);
       }
 
       u64 start = this->offset;
@@ -200,7 +202,7 @@ export namespace base::lex {
           }
         }
       }
-      return base::str::Str8(this->input.str + start, this->offset - start);
+      return Str8(this->input.str + start, this->offset - start);
     }
 
     /**
@@ -231,7 +233,7 @@ export namespace base::lex {
           advance(1);
         }
       }
-      return ParseResult<u64>::err(base::parse::ParseDiagCode::UnterminatedString);
+      return ParseResult<u64>::err(ParseDiagCode::UnterminatedString);
     }
 
     /**
@@ -252,11 +254,11 @@ export namespace base::lex {
      * @param parser Strict parser callback (`ParseResult<T> (*)(Str8)`).
      */
     template <typename T>
-    constexpr ParseResult<T> consume_int_impl(ParseResult<T> (*parser)(base::str::Str8)) {
+    constexpr ParseResult<T> consume_int_impl(ParseResult<T> (*parser)(Str8)) {
       u64 start = this->offset;
       u64 scan = start;
 
-      if constexpr (base::portability::is_signed_v<T>) {
+      if constexpr (portability::is_signed_v<T>) {
         if (scan < this->input.len && (this->input.str[scan] == '+' || this->input.str[scan] == '-')) {
           scan++;
         }
@@ -268,11 +270,11 @@ export namespace base::lex {
       }
 
       if (scan == digits_start) {
-        return ParseResult<T>::err(base::parse::ParseDiagCode::NoDigits);
+        return ParseResult<T>::err(ParseDiagCode::NoDigits);
       }
 
       this->offset = scan;
-      base::str::Str8 consumed{this->input.str + start, scan - start};
+      Str8 consumed{this->input.str + start, scan - start};
       return parser(consumed);
     }
 
@@ -283,44 +285,44 @@ export namespace base::lex {
      * validation/range checks to strict `base::parse::parse_u8`.
      */
     constexpr ParseResult<u8> consume_u8() {
-      return consume_int_impl<u8>(base::parse::parse_u8);
+      return consume_int_impl<u8>(parse_u8);
     }
 
     /**
      * @brief Consume `[+|-]?[0-9]+` and parse as `i8`.
      */
     constexpr ParseResult<i8> consume_i8() {
-      return consume_int_impl<i8>(base::parse::parse_i8);
+      return consume_int_impl<i8>(parse_i8);
     }
 
     /** @brief Consume `[0-9]+` and parse as `u16`. */
     constexpr ParseResult<u16> consume_u16() {
-      return consume_int_impl<u16>(base::parse::parse_u16);
+      return consume_int_impl<u16>(parse_u16);
     }
 
     /** @brief Consume `[+|-]?[0-9]+` and parse as `i16`. */
     constexpr ParseResult<i16> consume_i16() {
-      return consume_int_impl<i16>(base::parse::parse_i16);
+      return consume_int_impl<i16>(parse_i16);
     }
 
     /** @brief Consume `[0-9]+` and parse as `u32`. */
     constexpr ParseResult<u32> consume_u32() {
-      return consume_int_impl<u32>(base::parse::parse_u32);
+      return consume_int_impl<u32>(parse_u32);
     }
 
     /** @brief Consume `[+|-]?[0-9]+` and parse as `i32`. */
     constexpr ParseResult<i32> consume_i32() {
-      return consume_int_impl<i32>(base::parse::parse_i32);
+      return consume_int_impl<i32>(parse_i32);
     }
 
     /** @brief Consume `[0-9]+` and parse as `u64`. */
     constexpr ParseResult<u64> consume_u64() {
-      return consume_int_impl<u64>(base::parse::parse_u64);
+      return consume_int_impl<u64>(parse_u64);
     }
 
     /** @brief Consume `[+|-]?[0-9]+` and parse as `i64`. */
     constexpr ParseResult<i64> consume_i64() {
-      return consume_int_impl<i64>(base::parse::parse_i64);
+      return consume_int_impl<i64>(parse_i64);
     }
 
     /**
@@ -359,7 +361,7 @@ export namespace base::lex {
       }
 
       if (!has_digits) {
-        return ParseResult<f64>::err(base::parse::ParseDiagCode::NoDigits);
+        return ParseResult<f64>::err(ParseDiagCode::NoDigits);
       }
 
       if (scan < this->input.len && (this->input.str[scan] == 'e' || this->input.str[scan] == 'E')) {
@@ -380,8 +382,8 @@ export namespace base::lex {
       }
 
       this->offset = scan;
-      base::str::Str8 consumed{this->input.str + start, scan - start};
-      return base::parse::parse_f64(consumed);
+      Str8 consumed{this->input.str + start, scan - start};
+      return parse_f64(consumed);
     }
 
     /** @brief Consume and parse an `f32` prefix via `consume_f64`. */
@@ -400,11 +402,11 @@ export namespace base::lex {
    */
   struct TriviaConfig {
     /** @brief Line comment introducer (for example `//` or `#`). */
-    base::str::Str8 line_mark;
+    Str8 line_mark;
     /** @brief Block comment opener (for example slash-star). */
-    base::str::Str8 block_start;
+    Str8 block_start;
     /** @brief Block comment closer (for example star-slash). */
-    base::str::Str8 block_end;
+    Str8 block_end;
     /** @brief Enable nested block comment depth handling. */
     bool nested;
   };
@@ -415,7 +417,7 @@ export namespace base::lex {
    * This helper is read-only and does not advance the cursor. Taking
    * `const Str8Cursor&` makes that guarantee explicit for callers.
    */
-  constexpr bool cursor_starts_with(const Str8Cursor& cursor, base::str::Str8 mark) {
+  constexpr bool cursor_starts_with(const Str8Cursor& cursor, Str8 mark) {
     if (mark.len == 0 || cursor.offset + mark.len > cursor.input.len) {
       return false;
     }

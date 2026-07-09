@@ -17,6 +17,8 @@ import core_types;
 import core_portability;
 import core_vm;
 
+using namespace base;
+
 /**
  * @namespace base::mem
  * @brief Arena allocation primitives for transient data.
@@ -36,7 +38,7 @@ export namespace base::mem {
     u64 offset;
 
     /** @brief Alignment target for transparent huge page friendly mapping. */
-    static constexpr base::u64 THP_ALIGNMENT = (2zu * 1024zu * 1024zu);
+    static constexpr u64 THP_ALIGNMENT = (2zu * 1024zu * 1024zu);
 
     /** @brief Default constructs a zero-initialized arena handle. */
     inline Arena() = default;
@@ -53,12 +55,12 @@ export namespace base::mem {
       u64 total_capacity = align_forward(requested_capacity, this->THP_ALIGNMENT);
 
       // request writable virtual memory through the platform VM backend
-      void* ptr = base::vm::alloc(total_capacity);
+      void* ptr = vm::alloc(total_capacity);
       if (!ptr) {
         return false;
       }
   
-      base::vm::hint_hugepages(ptr, total_capacity);
+      vm::hint_hugepages(ptr, total_capacity);
 
       this->buffer = reinterpret_cast<u8*>(ptr);
       this->capacity = total_capacity;
@@ -85,7 +87,7 @@ export namespace base::mem {
 
       // Project portability shim formally begins typed array lifetime over the
       // raw storage returned by the arena.
-      return base::portability::start_lifetime_as_array<T>(raw_ptr, count);
+      return portability::start_lifetime_as_array<T>(raw_ptr, count);
     }
 
     /**
@@ -132,7 +134,7 @@ export namespace base::mem {
     void free() {
       BASE_ASSERT(this->buffer);
       if (this->buffer) {
-        base::vm::free(this->buffer, this->capacity);
+        vm::free(this->buffer, this->capacity);
         this->buffer = nullptr;
         this->capacity = 0;
         this->offset = 0;

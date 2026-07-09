@@ -33,6 +33,10 @@ We treat C++ strictly as a **"Better C Compiler."** We purposefully reject compl
 - Subsystem APIs must live one level down in purpose-built namespaces such as `base::str`, `base::mem`, `base::parse`, `base::lex`, `base::fs`, `base::console`, `base::vm`, and `base::portability`.
 - Function names should not carry redundant subsystem prefixes when the namespace already provides that context. Prefer `base::str::push_cap(...)` over names like `str8_push_cap(...)`.
 - Keep the namespace tree shallow. One subsystem level is the default; deeper nesting needs a strong architectural reason.
+- In implementation files, a local `using namespace base;` is acceptable when a module consumes many prelude-level names and would otherwise become visually noisy.
+- For heavily used subsystems in a single module, a local namespace alias such as `namespace mem = base::mem;` or `namespace str = base::str;` is preferred over repeated fully qualified names.
+- Keep those imports and aliases narrow in scope; do not place them in exported interfaces or headers that are meant to be included broadly.
+- Prefer explicit `using base::Name;` imports when only a few symbols are needed, and reserve `using namespace ...` for files where the repetition cost is actually high.
 
   
 ### Error Accumulation Contract (Lexer/Parser Split)
