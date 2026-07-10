@@ -16,7 +16,6 @@ using namespace base;
 using namespace str;
 using namespace mem;
 
-
 /**
  * @brief Placeholder puzzle routine for early day-logic experimentation.
  * @param raw Input byte slice.
