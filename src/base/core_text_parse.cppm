@@ -364,6 +364,29 @@ export namespace base::parse {
   /** @brief Parse `Str8` into `i64`. */
   constexpr ParseResult<i64> parse_i64(Str8 t) { return parse_int_impl<i64>(t); }  
 
+  template <typename T>
+  constexpr ParseResult<T> parse_int_impl(const char* cstr) {
+    auto str = Str8::from_cstr(cstr);
+    return parse_int_impl<T>(str);
+  }
+
+  /** @brief Parse `const char*` into `u8`. */
+  constexpr ParseResult<u8>  parse_u8(const char* t)  { return parse_int_impl<u8>(t); }
+  /** @brief Parse `const char*` into `i8`. */
+  constexpr ParseResult<i8>  parse_i8(const char* t)  { return parse_int_impl<i8>(t); }
+  /** @brief Parse `const char*` into `u16`. */
+  constexpr ParseResult<u16> parse_u16(const char* t) { return parse_int_impl<u16>(t); }
+  /** @brief Parse `const char*` into `i16`. */
+  constexpr ParseResult<i16> parse_i16(const char* t) { return parse_int_impl<i16>(t); }
+  /** @brief Parse `const char*` into `u32`. */
+  constexpr ParseResult<u32> parse_u32(const char* t) { return parse_int_impl<u32>(t); }
+  /** @brief Parse `const char*` into `i32`. */
+  constexpr ParseResult<i32> parse_i32(const char* t) { return parse_int_impl<i32>(t); }
+  /** @brief Parse `const char*` into `u64`. */
+  constexpr ParseResult<u64> parse_u64(const char* t) { return parse_int_impl<u64>(t); }
+  /** @brief Parse `const char*` into `i64`. */
+  constexpr ParseResult<i64> parse_i64(const char* t) { return parse_int_impl<i64>(t); }  
+
 
   //-------------------------------------------------------------
   // Floating point parsers

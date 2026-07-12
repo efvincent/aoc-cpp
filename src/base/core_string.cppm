@@ -2,6 +2,7 @@ module;
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+#include "core_debug.h"
 
 /**
  * @file core_string.cppm
@@ -70,6 +71,15 @@ export namespace base::str {
     }
 
     /**
+     * @brief Creates a Str8 view from a null-terminated C-string.
+     * @warning This performs an O(N) strlen calculation.
+     */
+    static constexpr Str8 from_cstr(const char* cstr) {
+      if (!cstr) return Str8{};
+      return Str8(reinterpret_cast<u8*>(const_cast<char*>(cstr)), static_cast<u64>(strlen(cstr)));
+    }
+
+    /**
      * @brief Constructs a view from a string literal, excluding trailing null.
      * @tparam N Literal array length including null terminator.
      * @post len is N - 1.
@@ -78,6 +88,22 @@ export namespace base::str {
     constexpr Str8(const char (&literal)[N]) {
       this->str = reinterpret_cast<u8*>(const_cast<char*>(literal));
       this->len = N - 1;    // Omit the null terminator
+    }
+
+    /**
+     * @brief Constructs a null terminated c-string from a Str8
+     * 
+     * @param arena Arena from which to allocate new memory for the cstr 
+     * @return const char* A null terminated C string
+     */
+    const char* to_cstr(Arena& arena) const {
+      BASE_ASSERT(this->str != nullptr);
+      auto buffer = arena.alloc_array<char>(this->len+1);
+      BASE_ASSERT(buffer != nullptr);
+
+      memcpy(buffer, this->str, this->len);
+      buffer[this->len] = 0;
+      return buffer;
     }
 
     /**
@@ -90,14 +116,78 @@ export namespace base::str {
      */
     constexpr Str8 slice(u64 start, u64 end) const {
       // Dev-time check using universal macro
-      #include "core_debug.h"
       BASE_ASSERT(start <= end);
       BASE_ASSERT(end <= this->len);
       return Str8(this->str + start, end - start);
     }
+
+    /**
+    * @brief Byte-wise equality comparison between two Str8 views.
+    * @param other Comparison target string view.
+    * @return True if lengths and bytes are equal.
+    */
+    constexpr bool match(Str8 other) {
+      if (this->len != other.len) return false;
+      for (u64 i = 0; i < this->len; i++) {
+        if (this->str[i] != other.str[i]) return false;
+      }
+      return true;
+    }
+
+    /**
+    * @brief Computes the 64-bit FNV-1a hash of this string view.
+    * @return 64-bit hash value.
+    * @note Hash is stable for identical byte sequences.
+    */
+    constexpr u64 hash_fnv1a() {
+      u64 hash = 14695981039346656037ULL;
+      for (u64 i = 0; i < this->len; ++i) {
+          hash ^= this->str[i];
+          hash *= 1099511628211ULL;
+      }
+      return hash;
+    }
   };
 
+  /**
+   * @brief Extracts the next delimiter-separated segment from a string view.
+   * @param remaining_str In/out remaining source view; advances past consumed bytes.
+   * @param out_slice Output slice for the next segment.
+   * @param delim Delimiter byte used to split segments.
+   * @return True when a segment is produced; false when input is exhausted.
+   */
+  bool iter_next(Str8 *remaining_str, Str8 *out_slice, char delim) {
+    BASE_ASSERT(remaining_str != nullptr);
+    BASE_ASSERT(out_slice != nullptr);
 
+    if (remaining_str->len == 0) {
+      return false; // Exhausted
+    }
+
+    u8 *start = remaining_str->str;
+    u8 *next = reinterpret_cast<u8*>(memchr(start, delim, remaining_str->len));
+ 
+    if (!next) {
+      // No more delimiters; return the rest of the string and exhaust the view
+      *out_slice = *remaining_str;
+      remaining_str->len = 0;
+      return true;
+    }
+
+    out_slice->str = start;
+    out_slice->len = (u64)(next - start);
+
+    // Advance the remaining view past the slice and the delimiter
+    u64 consumed = out_slice->len + 1;
+    remaining_str->str += consumed;
+    remaining_str->len -= consumed;
+
+    return true;
+  }
+
+  //-------------------------------------------------------------
+  // Str8 List
+  //-------------------------------------------------------------
 
   /** @brief Singly linked node containing one Str8 segment. */
   struct Str8Node {
@@ -146,31 +236,34 @@ export namespace base::str {
       this->node_count += 1;
       this->total_len += string.len;
     }
+
+    /**
+    * @brief Concatenates all segments in a Str8List into one contiguous Str8.
+    * @param arena Arena used for destination allocation.
+    * @return Joined string view; empty view if input is empty.
+    * @post Returned memory is owned by \p arena.
+    */
+    Str8 join(Arena& arena) {
+      if (this->total_len == 0) return Str8{};
+
+      // One single allocation for the entire compound string
+      u8* buffer = arena.alloc_array<u8>(this->total_len);
+      BASE_ASSERT(buffer != nullptr);
+
+      u64 write_offset = 0;
+      for (Str8Node* node = this->first; node != nullptr; node = node->next) {
+        if (node->string.len > 0) {
+          memcpy(buffer + write_offset, node->string.str, node->string.len);
+          write_offset += node->string.len;
+        }
+      }
+      return Str8(buffer, this->total_len);
+    }
   };
 
-  /**
-   * @brief Concatenates all segments in a Str8List into one contiguous Str8.
-   * @param permanent_arena Arena used for destination allocation.
-   * @param list Input linked list of segments.
-   * @return Joined string view; empty view if input is empty.
-   * @post Returned memory is owned by \p permanent_arena.
-   */
-  Str8 list_join(Arena& permanent_arena, Str8List list) {
-    if (list.total_len == 0) return Str8{};
-
-    // One single allocation for the entire compound string
-    u8* buffer = permanent_arena.alloc_array<u8>(list.total_len);
-    BASE_ASSERT(buffer != nullptr);
-
-    u64 write_offset = 0;
-    for (Str8Node* node = list.first; node != nullptr; node = node->next) {
-      if (node->string.len > 0) {
-        memcpy(buffer + write_offset, node->string.str, node->string.len);
-        write_offset += node->string.len;
-      }
-    }
-    return Str8(buffer, list.total_len);
-  }
+  //-------------------------------------------------------------
+  // Formatting into Str8
+  //-------------------------------------------------------------
 
   /**
    * @brief Formats text into arena memory using exact two-pass sizing.
@@ -179,7 +272,7 @@ export namespace base::str {
    * @param args Active vararg list.
    * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
    */
-  StringFormatResult vpushf(Arena& arena, const char* format, va_list args) {
+  StringFormatResult vformat(Arena& arena, const char* format, va_list args) {
     va_list count_args;
     va_copy(count_args, args);
     i32 formal_len = vsnprintf(nullptr, 0, format, count_args);
@@ -223,7 +316,7 @@ export namespace base::str {
    * @return Ok(Str8) on success, or Err(StringFormatError) for format failure,
    *         out-of-memory, or truncation.
    */
-  StringFormatResult vpush_cap(Arena& arena, u64 cap, const char* format, va_list args) {
+  StringFormatResult vformat_cap(Arena& arena, u64 cap, const char* format, va_list args) {
     if (cap == 0) {
       return StringFormatResult::ok(Str8{});
     }
@@ -268,10 +361,10 @@ export namespace base::str {
    * @param ... Format arguments.
    * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
    */
-  StringFormatResult pushf(Arena& arena, const char* format, ...) {
+  StringFormatResult format(Arena& arena, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    StringFormatResult result = vpushf(arena, format, args);
+    StringFormatResult result = vformat(arena, format, args);
     va_end(args);
     return result;
   }
@@ -284,41 +377,12 @@ export namespace base::str {
    * @param ... Format arguments.
    * @return Ok(Str8) on success, or Err(StringFormatError) on failure.
    */
-  StringFormatResult push_cap(Arena& arena, u64 cap, const char* format, ...) {
+  StringFormatResult format_cap(Arena& arena, u64 cap, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    StringFormatResult result = vpush_cap(arena, cap, format, args);
+    StringFormatResult result = vformat_cap(arena, cap, format, args);
     va_end(args);
     return result;
-  }
-
-  /**
-   * @brief Byte-wise equality comparison between two Str8 views.
-   * @param a First string view.
-   * @param b Second string view.
-   * @return True if lengths and bytes are equal.
-   */
-  constexpr bool match(Str8 a, Str8 b) {
-    if (a.len != b.len) return false;
-    for (u64 i = 0; i < a.len; i++) {
-      if (a.str[i] != b.str[i]) return false;
-    }
-    return true;
-  }
-
-  /**
-   * @brief Computes the 64-bit FNV-1a hash of a string view.
-   * @param string Input string view.
-   * @return 64-bit hash value.
-   * @note Hash is stable for identical byte sequences.
-   */
-  constexpr u64 hash_fnv1a(Str8 string) {
-    u64 hash = 14695981039346656037ULL;
-    for (u64 i = 0; i < string.len; ++i) {
-        hash ^= string.str[i];
-        hash *= 1099511628211ULL;
-    }
-    return hash;
   }
 
 }   // namespace base::str

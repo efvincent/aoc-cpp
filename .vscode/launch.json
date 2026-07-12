@@ -1,0 +1,67 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug AoC Worker (build first)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/aoc_worker_debug",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "preLaunchTask": "repro-make-debug",
+      "setupCommands": [
+        {
+          "description": "Enable GDB pretty printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    },
+    {
+      "name": "Debug AoC Worker (prompt year/day/part)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/aoc_worker_debug",
+      "args": [
+        "${input:aocYear}",
+        "${input:aocDay}",
+        "${input:aocPart}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "preLaunchTask": "repro-make-debug",
+      "setupCommands": [
+        {
+          "description": "Enable GDB pretty printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "aocYear",
+      "type": "promptString",
+      "description": "Year argument",
+      "default": "2015"
+    },
+    {
+      "id": "aocDay",
+      "type": "promptString",
+      "description": "Day argument",
+      "default": "1"
+    },
+    {
+      "id": "aocPart",
+      "type": "promptString",
+      "description": "Part argument",
+      "default": "1"
+    }
+  ]
+}

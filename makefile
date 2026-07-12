@@ -52,28 +52,20 @@ MOD_FLAGS := -fprebuilt-module-path=$(MOD_DIR)
 MJFLAGS   = $(if $(GENERATE_COMPDB),-MJ $(COMPDB_DIR)/$(subst /,_,$(patsubst $(OBJ_DIR)/%,%,$@)).json)
 
 # =====================================================
-# Dynamic Wildcard Ingestion & Automated File Layout
+# Recursive source discovery for everything under src/
 # =====================================================
 
-# Ingest base engineering files from src/base/
-BASE_SRCS   := $(wildcard $(SRC_DIR)/base/core_*.cppm)
+CPPM_SRCS := $(shell find $(SRC_DIR) -type f -name '*.cppm' | sort)
+CPP_SRCS  := $(shell find $(SRC_DIR) -type f -name '*.cpp'  | sort)
 
-# Ingest nested puzzle paths: matches any year directory (y2015-y2025) and day files
-PUZZLE_SRCS := $(wildcard $(SRC_DIR)/puzzles/y*/day*.cppm)
-MAIN_SRCS   := $(wildcard $(SRC_DIR)/main.cpp)
+MODULE_SRCS := $(CPPM_SRCS)
+MODULE_OBJS := $(patsubst $(SRC_DIR)/%.cppm,$(OBJ_DIR)/%.o,$(MODULE_SRCS))
+CPP_OBJS    := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(CPP_SRCS))
 
-# Map discovered source paths directly into isolated build object targets
-BASE_OBJS   := $(patsubst $(SRC_DIR)/base/%.cppm,$(OBJ_DIR)/base/%.o,$(BASE_SRCS))
-PUZZLE_OBJS := $(foreach src,$(PUZZLE_SRCS),$(patsubst $(SRC_DIR)/puzzles/%,$(OBJ_DIR)/puzzles/%,$(patsubst %.cppm,%.o,$(src))))
-MAIN_OBJ    := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(MAIN_SRCS))
+ALL_OBJS := $(MODULE_OBJS) $(CPP_OBJS)
 
-ALL_OBJS    := $(BASE_OBJS) $(PUZZLE_OBJS) $(MAIN_OBJ)
-MODULE_SRCS := $(BASE_SRCS) $(PUZZLE_SRCS)
-
-# Dynamic Module File Flag Generator:
-# Extracts module names from filenames and points Clang to their active .pcm caches
-LINK_MOD_FLAGS := $(foreach src,$(BASE_SRCS),-fmodule-file=$(basename $(notdir $(src)))=$(MOD_DIR)/$(basename $(notdir $(src))).pcm) \
-                  $(foreach src,$(PUZZLE_SRCS),-fmodule-file=$(basename $(notdir $(src)))=$(MOD_DIR)/$(basename $(notdir $(src))).pcm)
+# Point linker/consumers at every discovered prebuilt module.
+LINK_MOD_FLAGS := $(foreach src,$(MODULE_SRCS),-fmodule-file=$(basename $(notdir $(src)))=$(MOD_DIR)/$(patsubst $(SRC_DIR)/%.cppm,%.pcm,$(src)))
 
 # Automatic module dependency extraction from `import <module>;` statements.
 # Maps imported module names to local module object targets, so adding modules
@@ -88,7 +80,10 @@ $(foreach src,$(MODULE_SRCS),$(eval $(patsubst $(SRC_DIR)/%.cppm,$(OBJ_DIR)/%.o,
 # Phase execution and meta rules 
 #====================================
 
-.PHONY: all debug release lto instrument clean docs clean_all bear
+.PHONY: all debug release lto instrument bench bench-debug bench-release bench-lto bench-instrument clean docs clean_all bear
+
+N ?= 1000
+ARGS ?= 2015 2
 
 all: $(TARGET)
 
@@ -103,6 +98,21 @@ lto:
 
 instrument:
 	@$(MAKE) MODE=instrument all
+
+bench: $(MODE)
+	@./bench_nanos.sh $(N) $(MODE) $(ARGS)
+
+bench-debug: debug
+	@./bench_nanos.sh $(N) debug $(ARGS)
+
+bench-release: release
+	@./bench_nanos.sh $(N) release $(ARGS)
+
+bench-lto: lto
+	@./bench_nanos.sh $(N) lto $(ARGS)
+
+bench-instrument: instrument
+	@./bench_nanos.sh $(N) instrument $(ARGS)
 
 # The compilation database target: rebuilds with Clang -MJ fragments so
 # module interface units are recorded correctly in compile_commands.json.
@@ -119,20 +129,14 @@ $(TARGET): $(ALL_OBJS)
 	@$(MKDIR) build
 	$(CXX) $(CXXFLAGS) $(ALL_OBJS) -o $(TARGET)
 
-# rule A: Automatically compile core utilities inside src/base
-$(OBJ_DIR)/base/core_%.o: $(SRC_DIR)/base/core_%.cppm
-	@$(MKDIR) $(MOD_DIR) $(OBJ_DIR)/base $(if $(GENERATE_COMPDB),$(COMPDB_DIR))
-	$(CXX) $(CXXFLAGS) $(MOD_FLAGS) $(LINK_MOD_FLAGS) $(MJFLAGS) -fmodule-output=$(MOD_DIR)/core_$*.pcm -c $< -o $@
+# rule A: Compile any module interface unit discovered under src/
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cppm
+	@$(MKDIR) $(dir $(MOD_DIR)/$*.pcm) $(@D) $(if $(GENERATE_COMPDB),$(COMPDB_DIR))
+	$(CXX) $(CXXFLAGS) $(MOD_FLAGS) $(LINK_MOD_FLAGS) $(MJFLAGS) -fmodule-output=$(MOD_DIR)/$*.pcm -c $< -o $@
 
-# rule B: Automatically compile multi-year nested Puzzles
-# Matches objects like build/debug/obj/puzzles/y2020/day01.o
-$(OBJ_DIR)/puzzles/y%/day%.o: $(SRC_DIR)/puzzles/y%/day%.cppm $(BASE_OBJS)
-	@$(MKDIR) $(MOD_DIR) $(OBJ_DIR)/puzzles/y$* $(if $(GENERATE_COMPDB),$(COMPDB_DIR))
-	$(CXX) $(CXXFLAGS) $(MOD_FLAGS) $(LINK_MOD_FLAGS) $(MJFLAGS) -fmodule-output=$(MOD_DIR)/day$*.pcm -c $< -o $@
-
-# rule C: The Application Entry Point Execution Block
-$(OBJ_DIR)/main.o: $(SRC_DIR)/main.cpp $(BASE_OBJS) $(PUZZLE_OBJS)
-	@$(MKDIR) $(OBJ_DIR) $(if $(GENERATE_COMPDB),$(COMPDB_DIR))
+# rule B: Compile any translation unit discovered under src/
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(MODULE_OBJS)
+	@$(MKDIR) $(@D) $(if $(GENERATE_COMPDB),$(COMPDB_DIR))
 	$(CXX) $(CXXFLAGS) $(LINK_MOD_FLAGS) $(MJFLAGS) -c $< -o $@
 
 # ===============================

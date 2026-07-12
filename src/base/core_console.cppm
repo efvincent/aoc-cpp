@@ -123,7 +123,7 @@ export namespace base::console {
   inline ConsoleWriteResult printfl(mem::Arena& arena, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    StringFormatResult fmt = vpushf(arena, format, args);
+    StringFormatResult fmt = vformat(arena, format, args);
     va_end(args);
 
     if (!fmt.is_ok()) {
@@ -153,7 +153,7 @@ export namespace base::console {
   inline ConsoleWriteResult printfl_cap(mem::Arena& arena, u64 cap, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    StringFormatResult fmt = vpush_cap(arena, cap, format, args);
+    StringFormatResult fmt = vformat_cap(arena, cap, format, args);
     va_end(args);
 
     if (!fmt.is_ok()) {
@@ -183,7 +183,7 @@ export namespace base::console {
   inline ConsoleWriteResult eprintfl_cap(mem::Arena& arena, u64 cap, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    StringFormatResult fmt = vpush_cap(arena, cap, format, args);
+    StringFormatResult fmt = vformat_cap(arena, cap, format, args);
     va_end(args);
 
     if (!fmt.is_ok()) {

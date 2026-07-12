@@ -22,7 +22,7 @@ using namespace base;
 using namespace base::str;
 
 /**
- * @namespace base::fs
+ * @namespace fs
  * @brief Arena-friendly file IO utilities.
  */
 export namespace fs {
@@ -126,4 +126,4 @@ export namespace fs {
 
     return FileWriteResult::ok(bytes_written);
   }
-}   // namespace base::fs
+}   // namespace fs
