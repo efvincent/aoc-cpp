@@ -30,7 +30,8 @@ We treat C++ strictly as a **"Better C Compiler."** We purposefully reject compl
 
 ### Namespace Surface Policy
 - `base` is reserved for prelude-level primitives that are used nearly everywhere: scalar aliases, tiny arithmetic helpers, and compact result carriers.
-- Subsystem APIs must live one level down in purpose-built namespaces such as `base::str`, `base::mem`, `base::parse`, `base::lex`, `base::fs`, `base::console`, `base::vm`, and `base::portability`.
+- Subsystem APIs should live one level down in purpose-built namespaces such as `base::str`, `base::mem`, `base::parse`, `base::lex`, `base::console`, `base::vm`, and `base::portability`.
+- Current exception: file IO is still exported as legacy `fs` in `core_file`; treat that as compatibility surface until it is migrated under `base`.
 - Function names should not carry redundant subsystem prefixes when the namespace already provides that context. Prefer `base::str::push_cap(...)` over names like `str8_push_cap(...)`.
 - Keep the namespace tree shallow. One subsystem level is the default; deeper nesting needs a strong architectural reason.
 - In implementation files, a local `using namespace base;` is acceptable when a module consumes many prelude-level names and would otherwise become visually noisy.
@@ -136,3 +137,26 @@ Data pipelines (especially input stream text tokenization) rely heavily on short
 
 #### The Factory Lambda Pattern (`scoped_scratch`)
 For compact text scanning loops, internal parsing branches, or highly volatile structural processing, we leverage an inline template method execution fence:
+
+- Save arena cursor at entry.
+- Run caller logic with the same arena.
+- Restore cursor unconditionally before returning.
+
+This keeps temporary allocations explicit while guaranteeing rollback of scratch memory without hidden destructors.
+
+Example:
+
+```cpp
+arena.scoped_scratch([&](Arena* scratch) {
+	Str8 tmp = str::pushf(*scratch, "token=%.*s", (int)tok.len, tok.str).value;
+	// parse/inspect tmp here; storage is reclaimed automatically at scope exit
+});
+```
+
+#### Cursor Reset (`reset`)
+Use `reset()` only at clear phase boundaries where all arena-backed views are no longer needed. Reset is global for the arena and invalidates future writes through previously returned pointers.
+
+Policy:
+- Prefer `scoped_scratch` for local temporary work.
+- Use `reset()` for coarse lifecycle transitions (for example, per input file or per puzzle run).
+- Never rely on individual frees or object destructors.

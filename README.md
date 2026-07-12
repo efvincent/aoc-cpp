@@ -44,6 +44,81 @@ make bear
 make docs
 make clean
 make clean_all
+
+# benchmark entry points (nanosecond wall-clock)
+make bench-debug N=2000 ARGS='2015 2 1'
+make bench-release N=2000 ARGS='2015 2 1'
+make bench-lto N=2000 ARGS='2015 2 1'
+make bench-instrument N=200 ARGS='2015 2 1'
+make MODE=release bench N=2000 ARGS='2015 2'
+```
+
+### Benchmarking
+
+The project includes a root benchmark script and matching make targets:
+
+- Script: `./bench_nanos.sh`
+- Log file (default): `bench_results.csv`
+- Binary selector: build mode (`debug`, `release`, `lto`, `instrument`) or explicit binary path.
+
+#### Script usage
+
+```sh
+./bench_nanos.sh N BUILD year day [part]
+```
+
+- `N`: number of benchmark iterations (must be a positive integer).
+- `BUILD`: one of `debug`, `release`, `lto`, `instrument`, or a binary path.
+- Remaining arguments are passed directly to the AoC program.
+- `part` is optional; if omitted, the log records an empty field for `part`.
+
+Examples:
+
+```sh
+./bench_nanos.sh 5000 debug 2015 2 1
+./bench_nanos.sh 5000 release 2015 2
+./bench_nanos.sh 1000 build/aoc_worker_release 2015 2 2
+```
+
+#### Make target usage
+
+Benchmark targets automatically build the requested mode before running:
+
+```sh
+make bench-debug N=5000 ARGS='2015 2 1'
+make bench-release N=5000 ARGS='2015 2 1'
+make bench-lto N=5000 ARGS='2015 2 1'
+make bench-instrument N=200 ARGS='2015 2 1'
+```
+
+Generic target (uses `MODE`):
+
+```sh
+make MODE=release bench N=5000 ARGS='2015 2'
+```
+
+Defaults if omitted:
+
+- `N=1000`
+- `ARGS='2015 2'`
+
+#### Output and log format
+
+Each run prints:
+
+- `total_ns`: total wall-clock nanoseconds across `N` runs.
+- `avg_ns`: integer average nanoseconds per run.
+
+CSV rows are appended to `bench_results.csv` with header:
+
+```text
+timestamp,iterations,build,year,day,part,total_ns,avg_ns
+```
+
+Example row with omitted part:
+
+```text
+2026-07-12T20:28:04Z,2,debug,2015,2,,11453630,5726815
 ```
 
 ## Repository Layout

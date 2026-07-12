@@ -7,3 +7,6 @@ compile_commands.json
 # Generated Doxygen output
 docs/html/
 docs/latex/
+
+# benchmark results
+bench_results.csv
