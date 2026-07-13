@@ -11,6 +11,7 @@ import aoc_value;
 
 import y2015d01;
 import y2015d02;
+import y2015d03;
 
 using namespace base;
 using namespace mem;
@@ -129,8 +130,7 @@ export namespace puzzles {
       return;
     }
 
-    aoc::Value ans = {};
-
+    auto answers = arena.alloc_array<aoc::Value>(2);
     switch (spec.year) {
       case 2015:
 
@@ -138,48 +138,46 @@ export namespace puzzles {
 
           case 1:
             if (spec.part == 1 || spec.part == 0) {
-              ans = y2015::d01::part1(rawR.value);
-              print_ans(arena, spec, ans);
+              answers[0] = y2015::d01::part1(rawR.value);
             }
             if (spec.part == 2 || spec.part == 0) {
-              ans = y2015::d01::part2(rawR.value);
-              print_ans(arena, spec, ans);
+              answers[1] = y2015::d01::part2(rawR.value);
             }
           break;
 
           case 2:
             if (spec.part == 1 || spec.part == 0) {
-              ans = y2015::d02::part1(rawR.value);
-              print_ans(arena, spec, ans);
+              answers[0] = y2015::d02::part1(rawR.value);
             }
             if (spec.part == 2 || spec.part == 0) {
-              ans = y2015::d02::part2(rawR.value);
-              print_ans(arena, spec, ans);
+              answers[1] = y2015::d02::part2(rawR.value);
+            }
+          break;
+
+          case 3:
+            if (spec.part == 1 || spec.part == 0) {
+              answers[0] = y2015::d03::part1(rawR.value);
+            }
+            if (spec.part == 2 || spec.part == 0) {
+              answers[1] = y2015::d03::part2(rawR.value);
             }
           break;
 
           default:
             console::print_err(Str8("Unknown spec or spec not yet implemented."));
-            // switch(day)
-            // base::console::printl(str::formatl)
-            // fprintf(stderr, "Day %lu of year %lu not yet implemented.\n", day, year);
             return;
-        } /* switch */
+        } /* switch day */
 
       break;  // case year == 2015
 
       default:
-        // switch(year)
-        // fprintf(stderr, "Year %lu not yet implemented.\n", year);
+        auto msg = str::format_cap(arena, 50, "Year %lu not yet implemented.\n", spec.year);
+        console::print_err(msg.value);
         return;
+    } /* switch year */
 
-    } /* switch */
-    // auto scratch  = arena_scratch_begin(arena);
-    // auto raw_data = getData(arena, day, year);
-    // auto val      = aocValueToString(scratch.arena, puzzle(arena, raw_data));
-
-    // printf("Year %lu day %lu part %lu answer: %.*s\n", year, day, part, (int)val.size, val.str);
-
-    // arena_scratch_end(scratch);
+    // success, print the answer
+    if (spec.part == 1 || spec.part == 0) print_ans(arena, spec, answers[0]);
+    if (spec.part == 2 || spec.part == 0) print_ans(arena, spec, answers[1]);
   } 
 }
