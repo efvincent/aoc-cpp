@@ -133,7 +133,7 @@ export namespace base::hashmap {
       const u64 mask = capacity - 1;
       K cur_key = key;
       V cur_value = value;
-      u64 cur_hash = hash_of(cur_key);
+      u64 cur_hash = hash::hash_of(cur_key);
       u64 idx = cur_hash & mask;
       u64 dist = 0;
 
@@ -147,7 +147,7 @@ export namespace base::hashmap {
           return HashMapR<bool>::ok(true);
         }
 
-        if (hashes[idx] == cur_hash && key_eq(keys[idx], cur_key)) {
+        if (hashes[idx] == cur_hash &&  hash::key_eq(keys[idx], cur_key)) {
           values[idx] = cur_value;
           return HashMapR<bool>::ok(false);
         }
@@ -190,7 +190,7 @@ export namespace base::hashmap {
 
       const u64 mask = capacity - 1;
       K cur_key = key;
-      u64 cur_hash = hash_of(cur_key);
+      u64 cur_hash = hash::hash_of(cur_key);
       u64 idx = cur_hash & mask;
       u64 dist = 0;
 
@@ -203,7 +203,7 @@ export namespace base::hashmap {
           return HashMapR<bool>::ok(true);
         }
 
-        if (hashes[idx] == cur_hash && key_eq(keys[idx], cur_key)) {
+        if (hashes[idx] == cur_hash &&  hash::key_eq(keys[idx], cur_key)) {
           return HashMapR<bool>::ok(false);
         }
 
@@ -226,9 +226,9 @@ export namespace base::hashmap {
     template <typename K, typename V>
     /**
      * @brief Finds a mutable value pointer inside raw map storage.
-      * @return Ok(Option::some(pointer)) when found,
-      *         Ok(Option::none()) when absent, or Err(HashMapE)
-      *         on probe failure.
+     * @return Ok(Option::some(pointer)) when found,
+     *         Ok(Option::none()) when absent, or Err(HashMapE)
+     *         on probe failure.
      */
     inline HashMapR<Option<V*>> robin_hood_find_ptr_raw_map(
       K* keys,
@@ -249,7 +249,7 @@ export namespace base::hashmap {
       BASE_ASSERT(is_pow2_nonzero(capacity));
 
       const u64 mask = capacity - 1;
-      u64 key_hash = hash_of(key);
+      u64 key_hash = hash::hash_of(key);
       u64 idx = key_hash & mask;
       u64 dist = 0;
 
@@ -265,7 +265,7 @@ export namespace base::hashmap {
           return HashMapR<Option<V*>>::ok(Option<V*>::none());
         }
 
-        if (hashes[idx] == key_hash && key_eq(keys[idx], key)) {
+        if (hashes[idx] == key_hash &&  hash::key_eq(keys[idx], key)) {
           return HashMapR<Option<V*>>::ok(Option<V*>::some(&values[idx]));
         }
 
@@ -279,9 +279,9 @@ export namespace base::hashmap {
     template <typename K, typename V>
     /**
      * @brief Finds a const value pointer inside raw map storage.
-      * @return Ok(Option::some(pointer)) when found,
-      *         Ok(Option::none()) when absent, or Err(HashMapE)
-      *         on probe failure.
+     * @return Ok(Option::some(pointer)) when found,
+     *         Ok(Option::none()) when absent, or Err(HashMapE)
+     *         on probe failure.
      */
     inline HashMapR<Option<const V*>> robin_hood_find_ptr_raw_map_const(
       const K* keys,
@@ -302,7 +302,7 @@ export namespace base::hashmap {
       BASE_ASSERT(is_pow2_nonzero(capacity));
 
       const u64 mask = capacity - 1;
-      u64 key_hash = hash_of(key);
+      u64 key_hash = hash::hash_of(key);
       u64 idx = key_hash & mask;
       u64 dist = 0;
 
@@ -318,7 +318,7 @@ export namespace base::hashmap {
           return HashMapR<Option<const V*>>::ok(Option<const V*>::none());
         }
 
-        if (hashes[idx] == key_hash && key_eq(keys[idx], key)) {
+        if (hashes[idx] == key_hash &&  hash::key_eq(keys[idx], key)) {
           return HashMapR<Option<const V*>>::ok(Option<const V*>::some(&values[idx]));
         }
 
@@ -332,9 +332,9 @@ export namespace base::hashmap {
     template <typename K>
     /**
      * @brief Finds a mutable key pointer inside raw set storage.
-      * @return Ok(Option::some(pointer)) when found,
-      *         Ok(Option::none()) when absent, or Err(HashMapE)
-      *         on probe failure.
+     * @return Ok(Option::some(pointer)) when found,
+     *         Ok(Option::none()) when absent, or Err(HashMapE)
+     *         on probe failure.
      */
     inline HashMapR<Option<K*>> robin_hood_find_key_ptr_raw_set(
       K* keys,
@@ -353,7 +353,7 @@ export namespace base::hashmap {
       BASE_ASSERT(is_pow2_nonzero(capacity));
 
       const u64 mask = capacity - 1;
-      u64 key_hash = hash_of(key);
+      u64 key_hash = hash::hash_of(key);
       u64 idx = key_hash & mask;
       u64 dist = 0;
 
@@ -369,7 +369,7 @@ export namespace base::hashmap {
           return HashMapR<Option<K*>>::ok(Option<K*>::none());
         }
 
-        if (hashes[idx] == key_hash && key_eq(keys[idx], key)) {
+        if (hashes[idx] == key_hash &&  hash::key_eq(keys[idx], key)) {
           return HashMapR<Option<K*>>::ok(Option<K*>::some(&keys[idx]));
         }
 
@@ -383,9 +383,9 @@ export namespace base::hashmap {
     template <typename K>
     /**
      * @brief Finds a const key pointer inside raw set storage.
-      * @return Ok(Option::some(pointer)) when found,
-      *         Ok(Option::none()) when absent, or Err(HashMapE)
-      *         on probe failure.
+     * @return Ok(Option::some(pointer)) when found,
+     *         Ok(Option::none()) when absent, or Err(HashMapE)
+     *         on probe failure.
      */
     inline HashMapR<Option<const K*>> robin_hood_find_key_ptr_raw_set_const(
       const K* keys,
@@ -404,7 +404,7 @@ export namespace base::hashmap {
       BASE_ASSERT(is_pow2_nonzero(capacity));
 
       const u64 mask = capacity - 1;
-      u64 key_hash = hash_of(key);
+      u64 key_hash = hash::hash_of(key);
       u64 idx = key_hash & mask;
       u64 dist = 0;
 
@@ -420,7 +420,7 @@ export namespace base::hashmap {
           return HashMapR<Option<const K*>>::ok(Option<const K*>::none());
         }
 
-        if (hashes[idx] == key_hash && key_eq(keys[idx], key)) {
+        if (hashes[idx] == key_hash &&  hash::key_eq(keys[idx], key)) {
           return HashMapR<Option<const K*>>::ok(Option<const K*>::some(&keys[idx]));
         }
 
@@ -717,9 +717,9 @@ export namespace base::hashmap {
 
     /**
      * @brief Finds a mutable pointer to the value for key.
-      * @return Ok(Option::some(pointer)) when found,
-      *         Ok(Option::none()) when absent, or Err(HashMapE)
-      *         on failure.
+     * @return Ok(Option::some(pointer)) when found,
+     *         Ok(Option::none()) when absent, or Err(HashMapE)
+     *         on failure.
      */
     inline HashMapR<Option<V*>> find(const K& key) {
       return detail::robin_hood_find_ptr_raw_map(
@@ -729,9 +729,9 @@ export namespace base::hashmap {
 
     /**
      * @brief Finds a const pointer to the value for key.
-      * @return Ok(Option::some(pointer)) when found,
-      *         Ok(Option::none()) when absent, or Err(HashMapE)
-      *         on failure.
+     * @return Ok(Option::some(pointer)) when found,
+     *         Ok(Option::none()) when absent, or Err(HashMapE)
+     *         on failure.
      */
     inline HashMapR<Option<const V*>> find(const K& key) const {
       return detail::robin_hood_find_ptr_raw_map_const(
@@ -940,7 +940,7 @@ export namespace base::hashmap {
 
     /**
      * @brief Tests whether the set contains key.
-      * @return Ok(true) when present, Ok(false) when absent, or Err(HashMapE)
+     * @return Ok(true) when present, Ok(false) when absent, or Err(HashMapE)
      */
     inline HashMapR<bool> contains(const K& key) const {
       auto f = this->find(key);

@@ -23,7 +23,7 @@ export namespace base {
   template <typename T>
   struct Option  {
     T value;
-    bool has;
+    bool has = false;
 
     static_assert(portability::is_trivially_copyable_v<T>,
                   "FATAL: Option<T> requires trivially copyable T.");
@@ -60,7 +60,7 @@ export namespace base {
    */
   template <typename T>
   struct Option<T*> {
-    T* value;
+    T* value = nullptr;
 
     constexpr bool is_some() const { return this->value != nullptr; }
     constexpr bool is_none() const { return this->value == nullptr; }
