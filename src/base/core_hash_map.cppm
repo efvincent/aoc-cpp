@@ -35,6 +35,8 @@ export namespace base::hashmap {
     None = 0,
     /** @brief Arena allocation failed while reserving or rehashing. */
     OutOfMemory,
+    /** @brief Requested capacity exceeds the largest normalizable value. */
+    CapacityOverflow,
     /** @brief Probe walk exhausted the full table unexpectedly. */
     ProbeSequenceExhausted
   };
@@ -59,6 +61,9 @@ export namespace base::hashmap {
 
     /** @brief Smallest table capacity the implementation will allocate. */
     constexpr u64 MIN_CAPACITY = 8;
+    
+    /** @brief Largest capacity value that next_pow2 can normalize safely. */
+    constexpr u64 MAX_NORMALIZABLE_CAPACITY = (1ULL << 63);
 
     /** @brief Tests whether x is a non-zero power of two. */
     constexpr bool is_pow2_nonzero(u64 x) {
@@ -437,6 +442,10 @@ export namespace base::hashmap {
       u64*&  io_hashes,
       u8*&   io_ctrl
     ) {
+      if (requested_capacity > MAX_NORMALIZABLE_CAPACITY) {
+        return HashMapR<bool>::err(HashMapE::CapacityOverflow);
+      }
+
       u64 target_capacity = normalize_capacity(requested_capacity);
       if (io_capacity >= target_capacity) {
         return HashMapR<bool>::ok(false);
@@ -496,6 +505,10 @@ export namespace base::hashmap {
       u64*& io_hashes,
       u8*& io_ctrl
     ) {
+      if (requested_capacity > MAX_NORMALIZABLE_CAPACITY) {
+        return HashMapR<bool>::err(HashMapE::CapacityOverflow);
+      }
+
       u64 target_capacity = normalize_capacity(requested_capacity);
 
       if (io_capacity >= target_capacity) {
