@@ -9,6 +9,44 @@ This document tracks proposed improvements for portability, testing, and core pl
 - Add features behind clear interfaces so Linux-first optimizations remain available.
 - Prefer incremental, testable milestones over large one-shot rewrites.
 
+## 0. Hash Container Follow-Ups
+
+### Goals
+
+- Harden the new arena-backed hash container.
+- Preserve its current fast path while closing obvious functionality gaps.
+- Keep map and set usage aligned under one implementation strategy.
+
+### Proposed milestones
+
+1. Container correctness coverage:
+- Add focused regression tests for insert, overwrite, contains, and reserve-triggered rehash.
+- Add coverage for both `HashMap<K,V>` and `HashMap<K,void>`.
+- Exercise integer keys and `Str8` keys.
+
+2. API completion:
+- Decide whether to add `get_or_insert`, `find_or_default`, or similar convenience APIs.
+- Decide whether `find_ptr(...)` remains the primary lookup surface or whether a higher-level wrapper is needed.
+- Clarify whether mutation through returned pointers is a supported public contract.
+
+3. Erase strategy:
+- Either add tombstone-based erase semantics to the current table,
+- or explicitly keep this container insert/lookup-only and introduce deletion elsewhere.
+
+4. Metadata optimization:
+- Evaluate compact fingerprints in control bytes for faster negative lookups.
+- Evaluate grouped probing or SIMD-assisted metadata scans if benchmarks justify the added complexity.
+
+5. Arena lifecycle guidance:
+- Document expected growth behavior when repeated rehashes occur in long-lived arenas.
+- Decide whether a rebuild API should support caller-managed arena snapshots for bulk temporary maps.
+
+### Success criteria
+
+- Container behavior is documented and regression-tested.
+- The public API is explicit about supported operations and failure modes.
+- Performance changes are benchmarked rather than assumed.
+
 ## 1. Portability and Cross-Compiler Support
 
 ### Why this matters
@@ -197,11 +235,12 @@ Current direction:
 
 ## Implementation Order Recommendation
 
-1. Core tests expansion (improves safety for all later work).
-2. Portability abstraction for memory and compiler attributes.
-3. CLI utilities (immediate developer ergonomics).
-4. Huge file streaming support.
-5. HTTP client utilities.
+1. Hash container follow-ups.
+2. Core tests expansion (improves safety for all later work).
+3. Portability abstraction for memory and compiler attributes.
+4. CLI utilities (immediate developer ergonomics).
+5. Huge file streaming support.
+6. HTTP client utilities.
 
 ## Open Questions
 

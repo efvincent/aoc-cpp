@@ -192,3 +192,81 @@ Trade-offs:
 - `core_portability` owns compiler and standard-library gaps, not OS allocation APIs.
 
 This split is deliberate: compiler portability and operating-system portability are related concerns, but they are not the same layer and should not be collapsed into one module.
+
+## ADR-0005: HashMap Uses Arena-Backed Robin Hood Open Addressing
+
+- Status: Accepted
+- Date: 2026-07-13
+- Scope: Base hash container design for map and set workloads
+
+### Context
+
+The project needs a low-level hash container that matches the existing arena allocation model and stays efficient for Advent of Code style workloads.
+
+The main constraints are:
+
+- no per-element heap allocation;
+- explicit failure reporting via `Result<E,T>` rather than exceptions;
+- compatibility with both key-value maps and key-only sets;
+- predictable probe behavior under moderately high load factors;
+- acceptable performance for both integer keys and byte-string slice keys such as `Str8`.
+
+Separate chaining would introduce extra pointer chasing and allocator pressure. A traditional open-addressing table without probe balancing risks long clusters and unstable lookup costs as load increases.
+
+### Decision
+
+The hash container design uses arena-backed open addressing with Robin Hood insertion.
+
+The current shape is:
+
+1. capacity is always a power of two;
+2. indexing uses a bitmask rather than modulo;
+3. keys, values, cached hashes, and occupancy control bytes are stored in separate arrays;
+4. growth allocates new arena storage and reinserts live entries into the larger table;
+5. `HashMap<K, void>` is the set specialization and does not allocate a values array;
+6. operations report failures through a dedicated `HashMapE` error enum and `HashMapR<T>` aliases.
+
+### Why we need this
+
+- Robin Hood probing reduces variance in probe lengths and improves worst-case behavior at a given load factor.
+- Separate key, value, hash, and control arrays preserve a simple data-oriented layout and match the existing arena model.
+- Cached per-slot hashes avoid repeated re-hashing of resident keys during probe walks, which matters for `Str8` keys.
+- Arena growth through allocate-and-rehash keeps ownership simple and avoids per-entry lifetime bookkeeping.
+- A `void` specialization provides true set semantics without paying for unused value storage.
+
+### Consequences
+
+Positive:
+
+- No general-purpose heap allocator dependency in the hot path.
+- Predictable insertion and lookup behavior for the supported workload shape.
+- String-key probe chains avoid unnecessary repeated hash computation.
+- Map and set behavior share one conceptual implementation strategy.
+
+Trade-offs:
+
+- Growth is monotonic within an arena and does not reclaim prior table storage.
+- The current design does not yet support erase.
+- The current control-byte scheme is intentionally simple and does not yet use SIMD-friendly fingerprints.
+- The fast path assumes trivially copyable key and value types are the intended primary workload.
+
+### Alternatives considered
+
+1. Separate chaining with linked nodes.
+- Pros: simpler deletion semantics.
+- Cons: worse locality, more pointer chasing, and allocator pressure.
+
+2. Linear probing without Robin Hood balancing.
+- Pros: simpler insert logic.
+- Cons: longer-tail probe behavior under load.
+
+3. Recompute hashes on every probe step.
+- Pros: less storage overhead.
+- Cons: avoidable cost for non-trivial key types, especially `Str8`.
+
+### Follow-up actions
+
+- Add focused container tests for insert, overwrite, contains, and rehash behavior.
+- Decide whether erase belongs in this container or in a separate higher-level variant.
+- Evaluate SIMD-friendly metadata or fingerprint control bytes if probe performance becomes a bottleneck.
+- Document supported key/value type expectations more explicitly in API docs.
