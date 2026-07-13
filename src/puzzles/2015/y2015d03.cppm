@@ -68,22 +68,47 @@ export namespace y2015::d03 {
   }
 
   aoc::Value part1(Arena& arena, Str8 raw) {
-    i64 ans = 0;
     BASE_ASSERT(raw.len > 0);
 
-    Point p = {};
-    HashSet<Point> set = hashmap::HashSet<Point>();
-  
-    BASE_ASSERT(set.init(arena, 1000 * 1000).is_ok());
+    Point p = {0, 0};
+    auto set = hashmap::HashSet<Point>();
+    
+    BASE_ASSERT(set.init(arena, 1000).is_ok());
+    BASE_ASSERT(set.upsert(arena, p).is_ok());
 
-    return Value { ValueTag::Signed, { .i64 = ans } };
+    i64 count = 1;
+    for(u64 i = 0; i < raw.len; i++) {
+      modPoint(p, raw.str[i]);
+      auto res = set.upsert(arena, p);
+      if (res.is_ok() && res.value) {
+        count++;
+      }
+    }
+
+    return Value { ValueTag::Signed, { .i64 = count } };
   }
 
   aoc::Value part2(Arena& arena, Str8 raw) {
-    i64 ans = 0;
-
     BASE_ASSERT(raw.len > 0);
+    Point santa = {0,0};
+    Point robot = {0,0};
 
-    return Value { ValueTag::Signed, { .i64 = ans } };
+    auto set = hashmap::HashSet<Point>();
+    BASE_ASSERT(set.init(arena, 2000).is_ok());
+    BASE_ASSERT(set.upsert(arena, {0,0}).is_ok());
+    u64 count = 1;
+    bool robotTurn = false;
+
+    for (u64 i = 0; i < raw.len; i++) {
+      Point& who = robotTurn ? robot : santa;
+      modPoint(who, raw.str[i]);
+      auto res = set.upsert(arena, who);
+      if (res.is_ok() && res.value) {
+        count++;
+      }
+      robotTurn = !robotTurn;
+    }
+
+    return Value { ValueTag::Unsigned, { .u64 = count } };
   }
 }
