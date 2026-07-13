@@ -70,6 +70,13 @@ export namespace base::str {
       this->len = target_len;
     }
 
+    constexpr Str8(Arena& arena, u64 target_len) {
+      auto buffer = arena.alloc_array<u8>(target_len);
+      BASE_ASSERT(buffer != nullptr);
+      this->str = buffer;
+      this->len = target_len;
+    }
+
     /**
      * @brief Creates a Str8 view from a null-terminated C-string.
      * @warning This performs an O(N) strlen calculation.
