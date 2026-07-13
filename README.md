@@ -16,9 +16,27 @@ This README is the documentation index and recommended reading path.
 	- Forward-looking roadmap for portability, core tests, CLI utilities,
 	  huge file streaming, and HTTP client support.
 
-3. Doxygen API reference
+3. [docs/HASHMAP_ALGORITHMS.md](docs/HASHMAP_ALGORITHMS.md)
+	- Standalone walkthrough of the algorithms used in the arena-backed hash map.
+	- Covers Robin Hood probing, cached hashes, growth via rehash, and set specialization.
+
+4. [docs/CORE_MODULES_GUIDE.md](docs/CORE_MODULES_GUIDE.md)
+	- Guided overview of the foundational modules and how they connect.
+	- Useful when moving from architecture notes into concrete APIs.
+
+5. Doxygen API reference
+	- Rendered landing page: [docs/html/index.html](docs/html/index.html)
+	- Guided authored-doc entry page: [docs/DOXYGEN_MAINPAGE.md](docs/DOXYGEN_MAINPAGE.md)
 	- Generated output: [docs/html/index.html](docs/html/index.html)
 	- Configuration: [docs/Doxyfile](docs/Doxyfile)
+
+### Rendered Docs Structure
+
+The rendered Doxygen site now uses a dedicated Markdown landing page so authored design notes and API reference live in one navigation flow.
+
+- Landing page source: `docs/DOXYGEN_MAINPAGE.md`
+- Rendered main page: `docs/html/index.html`
+- Additional authored guides under `docs/` are included automatically by Doxygen.
 
 ### Contributor and project policy
 

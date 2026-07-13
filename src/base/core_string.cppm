@@ -126,7 +126,7 @@ export namespace base::str {
     * @param other Comparison target string view.
     * @return True if lengths and bytes are equal.
     */
-    constexpr bool match(Str8 other) {
+    constexpr bool match(Str8 other) const {
       if (this->len != other.len) return false;
       for (u64 i = 0; i < this->len; i++) {
         if (this->str[i] != other.str[i]) return false;
@@ -139,7 +139,7 @@ export namespace base::str {
     * @return 64-bit hash value.
     * @note Hash is stable for identical byte sequences.
     */
-    constexpr u64 hash_fnv1a() {
+    constexpr u64 hash_fnv1a() const {
       u64 hash = 14695981039346656037ULL;
       for (u64 i = 0; i < this->len; ++i) {
           hash ^= this->str[i];
