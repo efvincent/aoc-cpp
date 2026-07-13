@@ -29,7 +29,10 @@ COMPDB_FILE := compile_commands.json
 #=============================================
 
 CXX := clang++
-BASE_FLAGS := -std=c++23 -fno-exceptions -fno-rtti -Wall -Wextra -Wpedantic
+OPENSSL_CFLAGS := $(shell pkg-config --cflags openssl 2>/dev/null)
+OPENSSL_LIBS := $(shell pkg-config --libs openssl 2>/dev/null)
+
+BASE_FLAGS := -std=c++23 -fno-exceptions -fno-rtti -Wall -Wextra -Wpedantic $(OPENSSL_CFLAGS)
 
 ifeq ($(MODE), release)
 	# High optimization release
@@ -127,7 +130,7 @@ bear:
 # final link
 $(TARGET): $(ALL_OBJS)
 	@$(MKDIR) build
-	$(CXX) $(CXXFLAGS) $(ALL_OBJS) -o $(TARGET)
+	$(CXX) $(CXXFLAGS) $(ALL_OBJS) -o $(TARGET) $(OPENSSL_LIBS)
 
 # rule A: Compile any module interface unit discovered under src/
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cppm
