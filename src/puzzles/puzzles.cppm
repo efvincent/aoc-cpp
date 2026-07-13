@@ -109,15 +109,15 @@ export namespace puzzles {
     if (e.is_ok()) {
       return Result<bool, Str8>::ok(e.value);
     } else {
-      console::write_stderr(Str8("failed to compute filename"));
+      console::print_err(Str8("failed to compute filename"));
       return Result<bool, Str8>::err(false); 
     }
   }
 
-  void print_ans(Arena& arena, const PuzSpec& spec, const aoc::Value ans) {
+  void print_ans(Arena& arena, const PuzSpec& spec, u8 part, const aoc::Value ans) {
     Str8 ans_str = aoc::value_to_str8(arena, ans);
-    console::printfl_cap(arena, 100, "day %d of year %d part 1 ans: %.*s", 
-      spec.day, spec.year, (int)ans_str.len, ans_str.str);
+    console::printfl_cap(arena, 100, "day %d of year %d part %d ans: %.*s", 
+      spec.day, spec.year, part, (int)ans_str.len, ans_str.str);
   }
   
   /** @brief runs the specified puzzle */
@@ -126,7 +126,7 @@ export namespace puzzles {
     if (!fn.is_ok()) return;
     auto rawR = fs::read_all(arena, fn.value.to_cstr(arena));
     if (!rawR.is_ok()) {
-      console::write_stderr(Str8("failed to read data file"));
+      console::print_err(Str8("failed to read data file"));
       return;
     }
 
