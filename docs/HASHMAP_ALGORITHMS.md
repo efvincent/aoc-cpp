@@ -288,10 +288,10 @@ void example_map() {
 	BASE_ASSERT(overwrite_r.is_ok());
 	BASE_ASSERT(overwrite_r.value == false); // existing key was updated
 
-	auto find_r = counts.find_ptr(42);
+	auto find_r = counts.find(42);
 	BASE_ASSERT(find_r.is_ok());
-	BASE_ASSERT(find_r.value != nullptr);
-	BASE_ASSERT(*find_r.value == 99);
+	BASE_ASSERT(find_r.value.is_some());
+	BASE_ASSERT(*find_r.value.unwrap() == 99);
 
 	auto contains_r = counts.contains(7);
 	BASE_ASSERT(contains_r.is_ok());
@@ -303,7 +303,7 @@ void example_map() {
 
 ### Example: count-with-default pattern
 
-Because lookup returns pointers, a common pattern is:
+Because lookup returns Option-wrapped pointers, a common pattern is:
 
 1. look up the key;
 2. mutate in place if present;
@@ -317,11 +317,11 @@ import core_hash_map;
 using namespace base;
 
 void bump_count(Arena& arena, HashMap<u64, u64>& counts, u64 key) {
-	auto find_r = counts.find_ptr(key);
+	auto find_r = counts.find(key);
 	BASE_ASSERT(find_r.is_ok());
 
-	if (find_r.value) {
-		*find_r.value += 1;
+	if (find_r.value.is_some()) {
+		*find_r.value.unwrap() += 1;
 		return;
 	}
 
@@ -394,9 +394,9 @@ void example_str8_map(Arena& arena) {
 	auto ins_r = word_counts.upsert(arena, hello, 1);
 	BASE_ASSERT(ins_r.is_ok());
 
-	auto find_r = word_counts.find_ptr(Str8::from_cstr("hello"));
+	auto find_r = word_counts.find(Str8::from_cstr("hello"));
 	BASE_ASSERT(find_r.is_ok());
-	BASE_ASSERT(find_r.value != nullptr);
+	BASE_ASSERT(find_r.value.is_some());
 }
 ```
 
@@ -447,9 +447,9 @@ void example_custom_key(Arena& arena) {
 	auto upsert_r = visits.upsert(arena, p, 1);
 	BASE_ASSERT(upsert_r.is_ok());
 
-	auto find_r = visits.find_ptr(Point{10, 20});
+	auto find_r = visits.find(Point{10, 20});
 	BASE_ASSERT(find_r.is_ok());
-	BASE_ASSERT(find_r.value != nullptr);
+	BASE_ASSERT(find_r.value.is_some());
 }
 ```
 

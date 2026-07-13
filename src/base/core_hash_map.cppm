@@ -18,6 +18,7 @@ import core_types;
 import core_memory;
 import core_hash;
 import core_result;
+import core_option;
 
 using namespace base;
 
@@ -225,10 +226,11 @@ export namespace base::hashmap {
     template <typename K, typename V>
     /**
      * @brief Finds a mutable value pointer inside raw map storage.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on probe failure.
+      * @return Ok(Option::some(pointer)) when found,
+      *         Ok(Option::none()) when absent, or Err(HashMapE)
+      *         on probe failure.
      */
-    inline HashMapR<V*> robin_hood_find_ptr_raw_map(
+    inline HashMapR<Option<V*>> robin_hood_find_ptr_raw_map(
       K* keys,
       V* values,
       const u64* hashes,
@@ -237,7 +239,7 @@ export namespace base::hashmap {
       const K& key
     ) {
       if (capacity == 0) {
-        return HashMapR<V*>::ok(nullptr);
+        return HashMapR<Option<V*>>::ok(Option<V*>::none());
       }
 
       BASE_ASSERT(keys != nullptr);
@@ -253,34 +255,35 @@ export namespace base::hashmap {
 
       for (u64 steps = 0; steps < capacity; ++steps) {
         if (ctrl[idx] == CTRL_EMPTY) {
-          return HashMapR<V*>::ok(nullptr);
+          return HashMapR<Option<V*>>::ok(Option<V*>::none());
         }
 
         u64 resident_home = hashes[idx] & mask;
         u64 resident_dist = probe_distance(idx, resident_home, capacity);
 
         if (resident_dist < dist) {
-          return HashMapR<V*>::ok(nullptr);
+          return HashMapR<Option<V*>>::ok(Option<V*>::none());
         }
 
         if (hashes[idx] == key_hash && key_eq(keys[idx], key)) {
-          return HashMapR<V*>::ok(&values[idx]);
+          return HashMapR<Option<V*>>::ok(Option<V*>::some(&values[idx]));
         }
 
         idx = (idx + 1) & mask;
         dist += 1;
       }
 
-      return HashMapR<V*>::err(HashMapE::ProbeSequenceExhausted);
+      return HashMapR<Option<V*>>::err(HashMapE::ProbeSequenceExhausted);
     }
 
     template <typename K, typename V>
     /**
      * @brief Finds a const value pointer inside raw map storage.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on probe failure.
+      * @return Ok(Option::some(pointer)) when found,
+      *         Ok(Option::none()) when absent, or Err(HashMapE)
+      *         on probe failure.
      */
-    inline HashMapR<const V*> robin_hood_find_ptr_raw_map_const(
+    inline HashMapR<Option<const V*>> robin_hood_find_ptr_raw_map_const(
       const K* keys,
       const V* values,
       const u64* hashes,
@@ -289,7 +292,7 @@ export namespace base::hashmap {
       const K& key
     ) {
       if (capacity == 0) {
-        return HashMapR<const V*>::ok(nullptr);
+        return HashMapR<Option<const V*>>::ok(Option<const V*>::none());
       }
 
       BASE_ASSERT(keys != nullptr);
@@ -305,34 +308,35 @@ export namespace base::hashmap {
 
       for (u64 steps = 0; steps < capacity; ++steps) {
         if (ctrl[idx] == CTRL_EMPTY) {
-          return HashMapR<const V*>::ok(nullptr);
+          return HashMapR<Option<const V*>>::ok(Option<const V*>::none());
         }
 
         u64 resident_home = hashes[idx] & mask;
         u64 resident_dist = probe_distance(idx, resident_home, capacity);
 
         if (resident_dist < dist) {
-          return HashMapR<const V*>::ok(nullptr);
+          return HashMapR<Option<const V*>>::ok(Option<const V*>::none());
         }
 
         if (hashes[idx] == key_hash && key_eq(keys[idx], key)) {
-          return HashMapR<const V*>::ok(&values[idx]);
+          return HashMapR<Option<const V*>>::ok(Option<const V*>::some(&values[idx]));
         }
 
         idx = (idx + 1) & mask;
         dist += 1;
       }
 
-      return HashMapR<const V*>::err(HashMapE::ProbeSequenceExhausted);
+      return HashMapR<Option<const V*>>::err(HashMapE::ProbeSequenceExhausted);
     }    
 
     template <typename K>
     /**
      * @brief Finds a mutable key pointer inside raw set storage.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on probe failure.
+      * @return Ok(Option::some(pointer)) when found,
+      *         Ok(Option::none()) when absent, or Err(HashMapE)
+      *         on probe failure.
      */
-    inline HashMapR<K*> robin_hood_find_key_ptr_raw_set(
+    inline HashMapR<Option<K*>> robin_hood_find_key_ptr_raw_set(
       K* keys,
       const u64* hashes,
       const u8* ctrl,
@@ -340,7 +344,7 @@ export namespace base::hashmap {
       const K& key
     ) {
       if (capacity == 0) {
-        return HashMapR<K*>::ok(nullptr);
+        return HashMapR<Option<K*>>::ok(Option<K*>::none());
       }
 
       BASE_ASSERT(keys != nullptr);
@@ -355,34 +359,35 @@ export namespace base::hashmap {
 
       for (u64 steps = 0; steps < capacity; ++steps) {
         if (ctrl[idx] == CTRL_EMPTY) {
-          return HashMapR<K*>::ok(nullptr);
+          return HashMapR<Option<K*>>::ok(Option<K*>::none());
         }
 
         u64 resident_home = hashes[idx] & mask;
         u64 resident_dist = probe_distance(idx, resident_home, capacity);
 
         if (resident_dist < dist) {
-          return HashMapR<K*>::ok(nullptr);
+          return HashMapR<Option<K*>>::ok(Option<K*>::none());
         }
 
         if (hashes[idx] == key_hash && key_eq(keys[idx], key)) {
-          return HashMapR<K*>::ok(&keys[idx]);
+          return HashMapR<Option<K*>>::ok(Option<K*>::some(&keys[idx]));
         }
 
         idx = (idx + 1) & mask;
         dist += 1;
       }
 
-      return HashMapR<K*>::err(HashMapE::ProbeSequenceExhausted);
+      return HashMapR<Option<K*>>::err(HashMapE::ProbeSequenceExhausted);
     }
 
     template <typename K>
     /**
      * @brief Finds a const key pointer inside raw set storage.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on probe failure.
+      * @return Ok(Option::some(pointer)) when found,
+      *         Ok(Option::none()) when absent, or Err(HashMapE)
+      *         on probe failure.
      */
-    inline HashMapR<const K*> robin_hood_find_key_ptr_raw_set_const(
+    inline HashMapR<Option<const K*>> robin_hood_find_key_ptr_raw_set_const(
       const K* keys,
       const u64* hashes,
       const u8* ctrl,
@@ -390,7 +395,7 @@ export namespace base::hashmap {
       const K& key
     ) {
       if (capacity == 0) {
-        return HashMapR<const K*>::ok(nullptr);
+        return HashMapR<Option<const K*>>::ok(Option<const K*>::none());
       }
 
       BASE_ASSERT(keys != nullptr);
@@ -405,25 +410,25 @@ export namespace base::hashmap {
 
       for (u64 steps = 0; steps < capacity; ++steps) {
         if (ctrl[idx] == CTRL_EMPTY) {
-          return HashMapR<const K*>::ok(nullptr);
+          return HashMapR<Option<const K*>>::ok(Option<const K*>::none());
         }
 
         u64 resident_home = hashes[idx] & mask;
         u64 resident_dist = probe_distance(idx, resident_home, capacity);
 
         if (resident_dist < dist) {
-          return HashMapR<const K*>::ok(nullptr);
+          return HashMapR<Option<const K*>>::ok(Option<const K*>::none());
         }
 
         if (hashes[idx] == key_hash && key_eq(keys[idx], key)) {
-          return HashMapR<const K*>::ok(&keys[idx]);
+          return HashMapR<Option<const K*>>::ok(Option<const K*>::some(&keys[idx]));
         }
 
         idx = (idx + 1) & mask;
         dist += 1;
       }
 
-      return HashMapR<const K*>::err(HashMapE::ProbeSequenceExhausted);
+      return HashMapR<Option<const K*>>::err(HashMapE::ProbeSequenceExhausted);
     }
 
     template <typename K, typename V>
@@ -712,10 +717,11 @@ export namespace base::hashmap {
 
     /**
      * @brief Finds a mutable pointer to the value for key.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on failure.
+      * @return Ok(Option::some(pointer)) when found,
+      *         Ok(Option::none()) when absent, or Err(HashMapE)
+      *         on failure.
      */
-    inline HashMapR<V*> find_ptr(const K& key) {
+    inline HashMapR<Option<V*>> find(const K& key) {
       return detail::robin_hood_find_ptr_raw_map(
         this->keys, this->values, this->hashes, this->ctrl, this->capacity, key
       );
@@ -723,10 +729,11 @@ export namespace base::hashmap {
 
     /**
      * @brief Finds a const pointer to the value for key.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on failure.
+      * @return Ok(Option::some(pointer)) when found,
+      *         Ok(Option::none()) when absent, or Err(HashMapE)
+      *         on failure.
      */
-    inline HashMapR<const V*> find_ptr(const K& key) const {
+    inline HashMapR<Option<const V*>> find(const K& key) const {
       return detail::robin_hood_find_ptr_raw_map_const(
         this->keys, this->values, this->hashes, this->ctrl, this->capacity, key
       );
@@ -738,11 +745,11 @@ export namespace base::hashmap {
      *         on failure.
      */
     inline HashMapR<bool> contains(const K& key) const {
-      auto f = this->find_ptr(key);
+      auto f = this->find(key);
       if (!f.is_ok()) {
         return HashMapR<bool>::err(f.error);
       }
-      return HashMapR<bool>::ok(f.value != nullptr);
+      return HashMapR<bool>::ok(f.value.is_some());
     }
 
     /**
@@ -919,57 +926,28 @@ export namespace base::hashmap {
       return this->reserve(arena, this->capacity * 2);
     }
 
-    /**
-     * @brief Finds a mutable pointer to the resident key.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on failure.
-     */
-    inline HashMapR<K*> find_key_ptr(const K& key) {
+    inline HashMapR<Option<K*>> find(const K& key) {
       return detail::robin_hood_find_key_ptr_raw_set<K>(
         this->keys, this->hashes, this->ctrl, this->capacity, key
       );
     }
 
-    /**
-     * @brief Finds a const pointer to the resident key.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on failure.
-     */
-    inline HashMapR<const K*> find_key_ptr(const K& key) const {
+    inline HashMapR<Option<const K*>> find(const K& key) const {
       return detail::robin_hood_find_key_ptr_raw_set_const<K>(
         this->keys, this->hashes, this->ctrl, this->capacity, key
       );
     }
 
     /**
-     * @brief Finds a mutable pointer to the resident key.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on failure.
-     */
-    inline HashMapR<K*> find_ptr(const K& key) {
-      return this->find_key_ptr(key);
-    }
-
-    /**
-     * @brief Finds a const pointer to the resident key.
-     * @return Ok(pointer) when found, Ok(nullptr) when absent, or Err(HashMapE)
-     *         on failure.
-     */
-    inline HashMapR<const K*> find_ptr(const K& key) const {
-      return this->find_key_ptr(key);
-    }
-
-    /**
      * @brief Tests whether the set contains key.
-     * @return Ok(true) when present, Ok(false) when absent, or Err(HashMapE)
-     *         on failure.
+      * @return Ok(true) when present, Ok(false) when absent, or Err(HashMapE)
      */
     inline HashMapR<bool> contains(const K& key) const {
-      auto f = this->find_ptr(key);
+      auto f = this->find(key);
       if (!f.is_ok()) {
         return HashMapR<bool>::err(f.error);
       }
-      return HashMapR<bool>::ok(f.value != nullptr);
+      return HashMapR<bool>::ok(f.value.is_some());
     }
 
     /**
