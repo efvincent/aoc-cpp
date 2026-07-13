@@ -26,7 +26,7 @@ This document tracks proposed improvements for portability, testing, and core pl
 
 2. API completion:
 - Decide whether to add `get_or_insert`, `find_or_default`, or similar convenience APIs.
-- Decide whether `find_ptr(...)` remains the primary lookup surface or whether a higher-level wrapper is needed.
+- Evaluate whether `find(...) -> Option<pointer>` remains the primary lookup surface or whether a higher-level wrapper is needed.
 - Clarify whether mutation through returned pointers is a supported public contract.
 
 3. Erase strategy:

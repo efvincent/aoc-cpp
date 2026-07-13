@@ -156,10 +156,10 @@ export namespace puzzles {
 
           case 3:
             if (spec.part == 1 || spec.part == 0) {
-              answers[0] = y2015::d03::part1(rawR.value);
+              answers[0] = y2015::d03::part1(arena, rawR.value);
             }
             if (spec.part == 2 || spec.part == 0) {
-              answers[1] = y2015::d03::part2(rawR.value);
+              answers[1] = y2015::d03::part2(arena, rawR.value);
             }
           break;
 
