@@ -12,6 +12,7 @@ import aoc_value;
 import y2015d01;
 import y2015d02;
 import y2015d03;
+import y2015d04;
 
 using namespace base;
 using namespace mem;
@@ -163,6 +164,15 @@ export namespace puzzles {
             }
           break;
 
+          case 4:
+            if (spec.part == 1 || spec.part == 0) {
+              answers[0] = y2015::d04::part1(arena, rawR.value);
+            }
+            if (spec.part == 2 || spec.part == 0) {
+              answers[1] = y2015::d04::part2(arena, rawR.value);
+            }
+          break;
+
           default:
             console::print_err(Str8("Unknown spec or spec not yet implemented."));
             return;
@@ -177,7 +187,13 @@ export namespace puzzles {
     } /* switch year */
 
     // success, print the answer
-    if (spec.part == 1 || spec.part == 0) print_ans(arena, spec, answers[0]);
-    if (spec.part == 2 || spec.part == 0) print_ans(arena, spec, answers[1]);
+    if (spec.part == 1 || spec.part == 0) {
+      print_ans(arena, spec, 1, answers[0]);
+      console::flush_console();
+    }
+    if (spec.part == 2 || spec.part == 0) {
+      print_ans(arena, spec, 2, answers[1]);
+      console::flush_console();
+    }
   } 
 }
