@@ -402,6 +402,59 @@ void example_str8_map(Arena& arena) {
 
 In real parsing code, `Str8` keys often point into input buffers that already live for the duration of the table, which makes this a good fit for arena-scoped workloads.
 
+### Example: custom key type via `HashTraits<MyType>`
+
+If your key type is not one of the built-in specializations, add a `HashTraits<T>` specialization in `base::hash`.
+
+The key rule is consistency:
+
+- if `eq(a, b)` is true, `hash(a)` and `hash(b)` must be the same.
+
+```cpp
+import core_types;
+import core_hash;
+import core_hash_map;
+import core_memory;
+
+using namespace base;
+
+struct Point {
+	u32 x;
+	u32 y;
+};
+
+namespace base::hash {
+	template <>
+	struct HashTraits<Point> {
+		static constexpr u64 hash(const Point& p) {
+			// Pack x/y and run the same integer mixing path used elsewhere.
+			u64 packed = (static_cast<u64>(p.x) << 32) | static_cast<u64>(p.y);
+			return detail::mix64(packed);
+		}
+
+		static constexpr bool eq(const Point& a, const Point& b) {
+			return a.x == b.x && a.y == b.y;
+		}
+	};
+}
+
+void example_custom_key(Arena& arena) {
+	HashMap<Point, u64> visits = {};
+	auto init_r = visits.init(arena, 64);
+	BASE_ASSERT(init_r.is_ok());
+
+	Point p{10, 20};
+	auto upsert_r = visits.upsert(arena, p, 1);
+	BASE_ASSERT(upsert_r.is_ok());
+
+	auto find_r = visits.find_ptr(Point{10, 20});
+	BASE_ASSERT(find_r.is_ok());
+	BASE_ASSERT(find_r.value != nullptr);
+}
+```
+
+For set-style usage, the same specialization works unchanged with `HashSet<Point>`.
+
 ### Example: reserve when you know approximate size
 
 If the caller can estimate the number of inserts ahead of time, reserving early reduces rehash frequency.
@@ -449,6 +502,44 @@ void example_clear(Arena& arena) {
 
 That is useful when the table object is reused repeatedly inside a larger arena lifetime.
 
+### Example: slot-based traversal (map and set)
+
+The container now exposes a minimal, index-based traversal surface:
+
+- `first_live_slot()`
+- `next_live_slot(slot)`
+- `npos()`
+- `is_end_slot(slot)`
+- `key_at(slot)`
+- `value_at(slot)` (map only)
+
+This keeps iteration explicit and close to the underlying table representation.
+
+Map traversal:
+
+```cpp
+for (u64 slot = map.first_live_slot();
+		 !map.is_end_slot(slot);
+		 slot = map.next_live_slot(slot)) {
+	const K* key = map.key_at(slot);
+	const V* value = map.value_at(slot);
+	// use *key, *value
+}
+```
+
+Set traversal:
+
+```cpp
+for (u64 slot = set.first_live_slot();
+		 !set.is_end_slot(slot);
+		 slot = set.next_live_slot(slot)) {
+	const K* key = set.key_at(slot);
+	// use *key
+}
+```
+
+This style avoids heavyweight iterator abstractions while still preventing call sites from depending directly on raw control-byte checks.
+
 ## What the Current Design Does Not Yet Do
 
 The table is intentionally focused.
@@ -459,7 +550,6 @@ It does not yet implement:
 - tombstones;
 - SIMD-friendly metadata groups;
 - heterogeneous lookup;
-- iterator-style traversal helpers.
 
 That is a good thing for now. The implementation is still small enough to understand directly, and the current decisions are visible rather than buried under layers of generalization.
 

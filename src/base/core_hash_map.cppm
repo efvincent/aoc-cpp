@@ -586,6 +586,74 @@ export namespace base::hashmap {
       return this->count == 0;
     }
 
+    /** @brief Sentinel slot value used to represent end-of-iteration. */
+    static constexpr u64 npos() {
+      return max_u64;
+    }
+
+    /** @brief Returns true when slot equals the end sentinel. */
+    constexpr bool is_end_slot(u64 slot) const {
+      return slot == npos();
+    }
+
+    /**
+     * @brief Returns the first live slot index, or npos() if none exist.
+     */
+    inline u64 first_live_slot() const {
+      if (this->capacity == 0 || this->ctrl == nullptr) {
+        return npos();
+      }
+      for(u64 i = 0; i < this->capacity; ++i) {
+        if (this->ctrl[i] == detail::CTRL_FULL) {
+          return i;
+        }
+      }
+      return npos();
+    }
+
+    /**
+     * @brief Returns the next live slot after \\p slot, or npos() at end.
+     */
+    inline u64 next_live_slot(u64 slot) const {
+      if (this->capacity == 0 || this->ctrl == nullptr || slot >= this->capacity) {
+        return npos();
+      }
+      for (u64 i = slot + 1; i < this->capacity; ++i) {
+        if (this->ctrl[i] == detail::CTRL_FULL) {
+          return i;
+        }
+      }
+      return npos();
+    }
+
+    /** @brief Returns mutable key pointer for a live slot. */
+    inline K* key_at(u64 slot) {
+      BASE_ASSERT(slot < this->capacity);
+      BASE_ASSERT(this->ctrl[slot] == detail::CTRL_FULL);
+      return &this->keys[slot];
+    }
+
+    /** @brief Returns const key pointer for a live slot. */
+    inline const K* key_at(u64 slot) const {
+      BASE_ASSERT(slot < this->capacity);
+      BASE_ASSERT(this->ctrl[slot] == detail::CTRL_FULL);
+      return &this->keys[slot];
+    }
+
+    /** @brief Returns mutable value pointer for a live slot. */
+    inline V* value_at(u64 slot) {
+      BASE_ASSERT(slot < this->capacity);
+      BASE_ASSERT(this->ctrl[slot] == detail::CTRL_FULL);
+      return &this->values[slot];
+    }
+
+    /** @brief Returns const value pointer for a live slot. */
+    inline const V* value_at(u64 slot) const {
+      BASE_ASSERT(slot < this->capacity);
+      BASE_ASSERT(this->ctrl[slot] == detail::CTRL_FULL);
+      return &this->values[slot];
+    }
+
     /**
      * @brief Initializes storage with at least the requested capacity.
      * @param arena Arena supplying table storage.
@@ -682,7 +750,7 @@ export namespace base::hashmap {
     /** @brief Marks every slot empty without releasing arena storage. */
     inline void clear() {
       if (this->ctrl && this->capacity > 0) {
-        memset(this->ctrl, detail::CTRL_EMPTY, static_cast<u64>(this->capacity));
+        memset(this->ctrl, detail::CTRL_EMPTY, static_cast<size_t>(this->capacity));
       }
       this->count = 0;
     }
@@ -731,6 +799,68 @@ export namespace base::hashmap {
     /** @brief Reports whether the table currently stores no live entries. */
     constexpr bool empty() const {
       return this->count == 0;
+    }
+
+    /** @brief Sentinel slot value used to represent end-of-iteration. */
+    static constexpr u64 npos() {
+      return max_u64;
+    }
+
+    /** @brief Returns true when slot equals the end sentinel. */
+    constexpr bool is_end_slot(u64 slot) const {
+      return slot == npos();
+    }
+
+    /**
+     * @brief Returns the first live slot index, or npos() if none exist.
+     */
+    inline u64 first_live_slot() const {
+      if (this->capacity == 0 || this->ctrl == nullptr) {
+        return npos();
+      }
+
+      for (u64 i = 0; i < this->capacity; ++i) {
+        if (this->ctrl[i] == detail::CTRL_FULL) {
+          return i;
+        }
+      }
+
+      return npos();
+    }
+
+    /**
+     * @brief Returns the next live slot after \\p slot, or npos() at end.
+     */
+    inline u64 next_live_slot(u64 slot) const {
+      if (this->capacity == 0 || this->ctrl == nullptr) {
+        return npos();
+      }
+
+      if (slot >= this->capacity) {
+        return npos();
+      }
+
+      for (u64 i = slot + 1; i < this->capacity; ++i) {
+        if (this->ctrl[i] == detail::CTRL_FULL) {
+          return i;
+        }
+      }
+
+      return npos();
+    }
+
+    /** @brief Returns mutable key pointer for a live slot. */
+    inline K* key_at(u64 slot) {
+      BASE_ASSERT(slot < this->capacity);
+      BASE_ASSERT(this->ctrl[slot] == detail::CTRL_FULL);
+      return &this->keys[slot];
+    }
+
+    /** @brief Returns const key pointer for a live slot. */
+    inline const K* key_at(u64 slot) const {
+      BASE_ASSERT(slot < this->capacity);
+      BASE_ASSERT(this->ctrl[slot] == detail::CTRL_FULL);
+      return &this->keys[slot];
     }
 
     /**
@@ -848,7 +978,7 @@ export namespace base::hashmap {
     /** @brief Marks every slot empty without releasing arena storage. */
     inline void clear() {
       if (this->ctrl && this->capacity > 0) {
-        memset(this->ctrl, detail::CTRL_EMPTY, static_cast<u64>(this->capacity));
+        memset(this->ctrl, detail::CTRL_EMPTY, static_cast<size_t>(this->capacity));
       }
       this->count = 0;
     }
