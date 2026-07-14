@@ -163,31 +163,29 @@ export namespace base::str {
    * @param delim Delimiter byte used to split segments.
    * @return True when a segment is produced; false when input is exhausted.
    */
-  bool iter_next(Str8 *remaining_str, Str8 *out_slice, char delim) {
-    BASE_ASSERT(remaining_str != nullptr);
-    BASE_ASSERT(out_slice != nullptr);
+  bool iter_next(Str8& remaining_str, Str8& out_slice, char delim) {
 
-    if (remaining_str->len == 0) {
+    if (remaining_str.len == 0) {
       return false; // Exhausted
     }
 
-    u8 *start = remaining_str->str;
-    u8 *next = reinterpret_cast<u8*>(memchr(start, delim, remaining_str->len));
+    u8 *start = remaining_str.str;
+    u8 *next = reinterpret_cast<u8*>(memchr(start, delim, remaining_str.len));
  
     if (!next) {
       // No more delimiters; return the rest of the string and exhaust the view
-      *out_slice = *remaining_str;
-      remaining_str->len = 0;
+      out_slice = remaining_str;
+      remaining_str.len = 0;
       return true;
     }
 
-    out_slice->str = start;
-    out_slice->len = (u64)(next - start);
+    out_slice.str = start;
+    out_slice.len = (u64)(next - start);
 
     // Advance the remaining view past the slice and the delimiter
-    u64 consumed = out_slice->len + 1;
-    remaining_str->str += consumed;
-    remaining_str->len -= consumed;
+    u64 consumed = out_slice.len + 1;
+    remaining_str.str += consumed;
+    remaining_str.len -= consumed;
 
     return true;
   }

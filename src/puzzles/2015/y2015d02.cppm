@@ -59,7 +59,7 @@ export namespace y2015::d02 {
     Str8 line       = {};
     BoxDims box     = {};
 
-    while(str::iter_next(&remaining, &line, '\n')) {
+    while(str::iter_next(remaining, line, '\n')) {
       if (parse_dims(line, box)) {
         auto paper_needed = 
             (box.l * box.w * 2) 
@@ -80,7 +80,7 @@ export namespace y2015::d02 {
     Str8 line = {};
     BoxDims box = {};
 
-    while(str::iter_next(&remaining, &line, '\n')) {
+    while(str::iter_next(remaining, line, '\n')) {
       if (parse_dims(line, box)) {
         auto s1 = 2 * box.l + 2 * box.w;
         auto s2 = 2 * box.h + 2 * box.w;
