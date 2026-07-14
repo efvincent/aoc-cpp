@@ -15,20 +15,21 @@ using namespace str;
 using namespace aoc;
 
 export namespace y2015::d00 {
+  
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Wunused-parameter"
 
-  aoc::Value part1(Str8 raw) {
-    i64 ans = 0;
-
+  aoc::Value part1(Arena& arena, Str8 raw) {
     BASE_ASSERT(raw.len > 0);
 
-    return Value { ValueTag::Signed, { .i64 = ans } };
+    return Value { ValueTag::Signed, { .i64 = 0 } };
   }
 
-  aoc::Value part2(Str8 raw) {
-    i64 ans = 0;
-
+  aoc::Value part2(Arena& arena, Str8 raw) {
     BASE_ASSERT(raw.len > 0);
 
-    return Value { ValueTag::Signed, { .i64 = ans } };
+    return Value { ValueTag::Signed, { .i64 = 0 } };
   }
+
+  #pragma clang diagnostic pop
 }
