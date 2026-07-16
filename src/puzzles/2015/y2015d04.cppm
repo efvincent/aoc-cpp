@@ -79,7 +79,6 @@ export namespace y2015::d04 {
 
   u64 find_lowest_suffix(Arena& arena, Str8 key, bool (*predicate)(Str8)) {
     u64 count = 0;
-    u64 start_pos = arena.offset;
     Str8 temp = Str8(arena, key.len + 10);
     memcpy(temp.str, key.str, key.len);
     temp.len = key.len;
@@ -96,19 +95,24 @@ export namespace y2015::d04 {
       arena.offset = digest_start_pos;
       count++;
     }
-    arena.offset = start_pos;
     return count;
   }
 
   aoc::Value part1(Arena& arena, Str8 raw) {
     BASE_ASSERT(raw.len > 0);
-    u64 ans = find_lowest_suffix(arena, raw, has_five_zero_prefix);
+    u64 ans = 0;
+    arena.scoped_scratch([&](Arena& scratch) {
+      ans = find_lowest_suffix(scratch, raw, has_five_zero_prefix);
+    });
     return Value { ValueTag::Unsigned, { .u64 = ans } };
   }
 
   aoc::Value part2(Arena& arena, Str8 raw) {
     BASE_ASSERT(raw.len > 0);
-    u64 ans = find_lowest_suffix(arena, raw, has_six_zero_prefix);
+    u64 ans = 0;
+    arena.scoped_scratch([&](Arena& scratch) {
+      ans = find_lowest_suffix(scratch, raw, has_six_zero_prefix);
+    });
     return Value { ValueTag::Unsigned, { .u64 = ans } };
   }
 }
