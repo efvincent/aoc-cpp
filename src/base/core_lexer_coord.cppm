@@ -81,9 +81,9 @@ export namespace base::lex {
    * @return Parsed integer result or error code from strict parser.
    */
   template <typename T>
-  constexpr ParseResult<T> coord_consume_int(Str8Cursor& cursor,
-                                             ParseResult<T> (*parser)(str::Str8),
-                                             DiagBuffer& diags) {
+  constexpr ParseResult<T> consume_int(Str8Cursor& cursor,
+                                       ParseResult<T> (*parser)(str::Str8),
+                                       DiagBuffer& diags) {
     u64 start = cursor.offset;
     ParseResult<T> res = cursor.consume_int_impl<T>(parser);
     if (!res.is_ok() && cursor.offset > start) {
@@ -94,43 +94,43 @@ export namespace base::lex {
   }
 
   /** @brief Coordinator wrapper for consuming `u8` with diagnostic emission. */
-  constexpr ParseResult<u8> coord_consume_u8(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<u8>(cursor, parse_u8, diags);
+  constexpr ParseResult<u8> consume_u8(Str8Cursor& cursor, DiagBuffer& diags) {
+    return consume_int<u8>(cursor, parse_u8, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `i8` with diagnostic emission. */
-  constexpr ParseResult<i8> coord_consume_i8(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<i8>(cursor, parse_i8, diags);
+  constexpr ParseResult<i8> consume_i8(Str8Cursor& cursor, DiagBuffer& diags) {
+    return consume_int<i8>(cursor, parse_i8, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `u16` with diagnostic emission. */
-  constexpr ParseResult<u16> coord_consume_u16(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<u16>(cursor, parse_u16, diags);
+  constexpr ParseResult<u16> consume_u16(Str8Cursor& cursor, DiagBuffer& diags) {
+    return consume_int<u16>(cursor, parse_u16, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `i16` with diagnostic emission. */
-  constexpr ParseResult<i16> coord_consume_i16(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<i16>(cursor, parse_i16, diags);
+  constexpr ParseResult<i16> consume_i16(Str8Cursor& cursor, DiagBuffer& diags) {
+    return consume_int<i16>(cursor, parse_i16, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `u32` with diagnostic emission. */
-  constexpr ParseResult<u32> coord_consume_u32(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<u32>(cursor, parse_u32, diags);
+  constexpr ParseResult<u32> consume_u32(Str8Cursor& cursor, DiagBuffer& diags) {
+    return consume_int<u32>(cursor, parse_u32, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `i32` with diagnostic emission. */
-  constexpr ParseResult<i32> coord_consume_i32(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<i32>(cursor, parse_i32, diags);
+  constexpr ParseResult<i32> consume_i32(Str8Cursor& cursor, DiagBuffer& diags) {
+    return consume_int<i32>(cursor, parse_i32, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `u64` with diagnostic emission. */
-  constexpr ParseResult<u64> coord_consume_u64(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<u64>(cursor, parse_u64, diags);
+  constexpr ParseResult<u64> consume_u64(Str8Cursor& cursor, DiagBuffer& diags) {
+    return consume_int<u64>(cursor, parse_u64, diags);
   }
 
   /** @brief Coordinator wrapper for consuming `i64` with diagnostic emission. */
-  constexpr ParseResult<i64> coord_consume_i64(Str8Cursor& cursor, DiagBuffer& diags) {
-    return coord_consume_int<i64>(cursor, parse_i64, diags);
+  constexpr ParseResult<i64> consume_i64(Str8Cursor& cursor, DiagBuffer& diags) {
+    return consume_int<i64>(cursor, parse_i64, diags);
   }
 
   /**
@@ -138,7 +138,7 @@ export namespace base::lex {
    *
    * Emits diagnostics for consumed strict failures only.
    */
-  constexpr ParseResult<f64> coord_consume_f64(Str8Cursor& cursor, DiagBuffer& diags) {
+  constexpr ParseResult<f64> consume_f64(Str8Cursor& cursor, DiagBuffer& diags) {
     u64 start = cursor.offset;
     ParseResult<f64> res = cursor.consume_f64();
     if (!res.is_ok() && cursor.offset > start) {
@@ -154,8 +154,8 @@ export namespace base::lex {
    * This delegates windowing and diagnostic emission to @ref coord_consume_f64
    * and narrows successful values to `f32`.
    */
-  constexpr ParseResult<f32> coord_consume_f32(Str8Cursor& cursor, DiagBuffer& diags) {
-    auto res = coord_consume_f64(cursor, diags);
+  constexpr ParseResult<f32> consume_f32(Str8Cursor& cursor, DiagBuffer& diags) {
+    auto res = consume_f64(cursor, diags);
     if (!res.is_ok()) {
       return ParseResult<f32>::err(res.error);
     }
@@ -168,9 +168,9 @@ export namespace base::lex {
    * Strict parsing remains in @ref Str8Cursor::parse_string_literal. This
    * wrapper binds that result to source-span diagnostics.
    */
-  constexpr ParseResult<u64> coord_parse_string_literal(Str8Cursor& cursor, DiagBuffer& diags) {
+  constexpr ParseResult<u64> parse_string_literal(Str8Cursor& cursor, DiagBuffer& diags) {
     u64 start = cursor.offset;
-    ParseResult<u64> res = cursor.parse_string_literal();
+    ParseResult<u64> res = cursor.consume_string_literal();
     if (!res.is_ok() && cursor.offset > start) {
       ParseDiagnostic diag = make_error_diag(res.error, start, cursor.offset);
       (void)diag_buffer_push(diags, diag);
@@ -183,7 +183,7 @@ export namespace base::lex {
    *
    * Reports unterminated block comments while preserving lexer cursor progress.
    */
-  constexpr ParseResult<u8> coord_skip_trivia(Str8Cursor& cursor, TriviaConfig config, DiagBuffer& diags) {
+  constexpr ParseResult<u8> skip_trivia(Str8Cursor& cursor, TriviaConfig config, DiagBuffer& diags) {
     while (!cursor.is_eof()) {
       // skip standard whitespace
       if (cursor.is_whitespace(cursor.peek())) {

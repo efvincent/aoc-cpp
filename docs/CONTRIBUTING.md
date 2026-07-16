@@ -147,8 +147,8 @@ This keeps temporary allocations explicit while guaranteeing rollback of scratch
 Example:
 
 ```cpp
-arena.scoped_scratch([&](Arena* scratch) {
-	Str8 tmp = str::pushf(*scratch, "token=%.*s", (int)tok.len, tok.str).value;
+arena.scoped_scratch([&](Arena& scratch) {
+	Str8 tmp = str::pushf(scratch, "token=%.*s", (int)tok.len, tok.str).value;
 	// parse/inspect tmp here; storage is reclaimed automatically at scope exit
 });
 ```

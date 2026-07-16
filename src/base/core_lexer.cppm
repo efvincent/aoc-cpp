@@ -182,7 +182,7 @@ export namespace base::lex {
      * @return Borrowed identifier slice, or empty slice if no identifier starts
      *         at the current position.
      */
-    constexpr Str8 parse_ident() {
+    constexpr Str8 consume_ident() {
       // Guard against null-base pointer arithmetic for empty/null input slices
       if (this->input.str == nullptr || this->input.len == 0) {
         return Str8(nullptr, 0);
@@ -217,7 +217,7 @@ export namespace base::lex {
      * @note Diagnostic accumulation is coordinator-layer policy; see
      *       core_lexer_coord wrappers.
      */
-    constexpr ParseResult<u64> parse_string_literal() {
+    constexpr ParseResult<u64> consume_string_literal() {
       u64 start = this->offset;
       advance();  // advance past opening quote
       while (!is_eof()) {
