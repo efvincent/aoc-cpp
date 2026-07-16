@@ -24,7 +24,7 @@ using namespace puzzles;
  */
 int main(int argc, char** argv) {
   Arena arena = Arena();
-  if (!arena.init(MB(1))) {
+  if (!arena.init(MB(10))) {
     console::print_err(Str8("failed to allocate arena memory."));
     return 1;
   }
