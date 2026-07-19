@@ -15,6 +15,7 @@ import y2015d03;
 import y2015d04;
 import y2015d05;
 import y2015d06;
+import y2015d07;
 
 using namespace base;
 using namespace mem;
@@ -190,6 +191,15 @@ export namespace puzzles {
             }
             if (spec.part == 2 || spec.part == 0) {
               answers[1] = y2015::d06::part2(arena, rawR.value);
+            }
+          break;
+
+          case 7:
+            if (spec.part == 1 || spec.part == 0) {
+              answers[0] = y2015::d07::part1(arena, rawR.value);
+            }
+            if (spec.part == 2 || spec.part == 0) {
+              answers[1] = y2015::d07::part2(arena, rawR.value);
             }
           break;
 

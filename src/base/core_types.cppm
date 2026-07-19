@@ -1,6 +1,7 @@
 module; 
 
 #include <stdint.h>
+#include "core_debug.h"
 
 /**
  * @file core_types.cppm
@@ -20,7 +21,7 @@ export module core_types;
 export namespace base {
 
     // ==========================================================================
-    // 1. Explicit Fixed-Width Scalar Aliases
+    // Explicit Fixed-Width Scalar Aliases
     // ==========================================================================
     /** @brief Signed 8-bit integer alias. */
     using i8  = int8_t;
@@ -49,7 +50,7 @@ export namespace base {
     using VoidFunc = void(*)(void);
 
     // ==========================================================================
-    // 2. Type-Safe Limits
+    // Type-Safe Limits
     // ==========================================================================
     /** @brief Minimum representable i8 value. */
     constexpr i8  min_i8  = -128;
@@ -79,7 +80,28 @@ export namespace base {
     constexpr u64 max_u64 = 18446744073709551615ULL;
 
     // ==========================================================================
-    // 3. Constexpr Mathematical Helpers (Standardized on u64)
+    // Generic Slice/List
+    // ==========================================================================
+    template <typename T>
+    struct Slice {
+        T* data;
+        u64 len;
+    
+        // Zero cost inline helpers allow standard C++ range-based loops
+        // like (for auto& item : slice) without violating HMH standards,
+        // they compile away to raw pointer math
+        inline T* begin() { return data; }
+        inline T* end() { return data + len; }
+
+        // Quick indexing
+        inline T& operator[](u64 index) {
+            BASE_ASSERT(index < len);
+            return data[index];
+        }
+    };
+
+    // ==========================================================================
+    // Constexpr Mathematical Helpers (Standardized on u64)
     // ==========================================================================
     /**
      * @brief Returns the lesser of two values.
@@ -153,7 +175,7 @@ export namespace base {
     }
 
     // ==========================================================================
-    // 4. Literal Sizing Operators (Using u64)
+    // Literal Sizing Operators (Using u64)
     // ==========================================================================
     /**
      * @brief Converts kibibytes to bytes.
