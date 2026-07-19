@@ -80,9 +80,6 @@ export namespace y2015::d06 {
     return inst;
   }
   
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wunused-parameter"
-
   Str8 op_str(Operation op) {
     switch (op) {
       case Operation::TOGGLE:
@@ -198,6 +195,4 @@ export namespace y2015::d06 {
 
     return Value { ValueTag::Unsigned, { .u64 = count } };
   }
-
-  #pragma clang diagnostic pop
 }
