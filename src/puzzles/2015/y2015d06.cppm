@@ -1,6 +1,6 @@
 module;
 
-#include "../../base/core_debug.h"
+#include "core_debug.h"
 
 export module y2015d06;
 

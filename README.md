@@ -1,6 +1,6 @@
 # aoc-cpp
 
-Low-level Advent of Code workspace using C++23 modules and explicit systems-style design.
+Low-level Advent of Code workspace using C++26 modules and explicit systems-style design.
 
 This README is the documentation index and recommended reading path.
 
@@ -48,9 +48,25 @@ The rendered Doxygen site now uses a dedicated Markdown landing page so authored
 
 ### Requirements
 
-- clang++ with C++23 modules support
+- clang++ with C++26 modules support
 - make
 - doxygen (for API docs)
+
+### Clone and submodule setup
+
+The repository consumes core modules through a pinned git submodule.
+
+```sh
+git clone https://github.com/efvincent/aoc-cpp.git
+cd aoc-cpp
+git submodule update --init --recursive
+```
+
+To verify the pin contract locally:
+
+```sh
+make verify-submodule-pin
+```
 
 ### Common commands
 
@@ -62,6 +78,7 @@ make instrument
 make bear
 make docs
 make docs_pdf
+make verify-submodule-pin
 make clean
 make clean_all
 
@@ -149,7 +166,8 @@ Example row with omitted part:
 
 ## Repository Layout
 
-- src/: executable entry point and C++ module units
+- src/: executable entry point and AoC-specific module units
+- third_party/cpp-core/: pinned core module source submodule
 - docs/: authored docs, Doxygen config, generated API docs
 - data/: Advent of Code inputs
 - build/: generated binaries, module caches, objects, and intermediate output

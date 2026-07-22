@@ -1,0 +1,19 @@
+name: Verify cpp-core submodule pin
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  verify-cpp-core-pin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Verify cpp-core tag pin
+        run: make verify-submodule-pin

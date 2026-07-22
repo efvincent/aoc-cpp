@@ -9,6 +9,36 @@ This document serves as the absolute reference for the architectural foundations
 
 ---
 
+## Submodule Dependency Contract
+
+- `cpp-core` is consumed via git submodule at `third_party/cpp-core`.
+- Downstream pin policy: point only to released semver tags (`vMAJOR.MINOR.PATCH`).
+- Reject untagged or floating submodule pointers in review/CI.
+
+### Initial setup
+
+```sh
+git submodule update --init --recursive
+```
+
+### Standard upgrade workflow
+
+```sh
+git -C third_party/cpp-core fetch --tags origin
+git -C third_party/cpp-core checkout vX.Y.Z
+git add third_party/cpp-core
+git commit -m "chore(submodule): bump cpp-core to vX.Y.Z"
+```
+
+After any bump, run full local integration checks (build modes and puzzle smoke runs) before opening a PR.
+
+### Pin verification
+
+- Local check: `make verify-submodule-pin`
+- CI/script entrypoint: `ci/verify_cpp_core_submodule.sh`
+
+---
+
 ## 1. Core Philosophy & Language Paradigm
 
 ### The "Orthodox C++" (C+) Paradigm
