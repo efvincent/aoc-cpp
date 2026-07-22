@@ -21,6 +21,68 @@ At a high level:
 7. `core_hash` defines hashing traits over supported key types.
 8. `core_hash_map` builds the arena-backed hash containers.
 
+## Module Dependency DAG
+
+The direct module dependencies form a DAG. A lower layer is imported by the modules above it, and higher layers never feed back into the foundation.
+
+\dot
+digraph module_dependency_dag {
+	rankdir=TB;
+	node [shape=box, style=rounded];
+
+	core_portability -> core_types;
+	core_vm -> core_types;
+	core_result -> core_types;
+	core_option -> core_types;
+	core_option -> core_portability;
+	core_memory -> core_types;
+	core_memory -> core_portability;
+	core_memory -> core_vm;
+	core_string -> core_types;
+	core_string -> core_memory;
+	core_string -> core_result;
+	core_hash -> core_types;
+	core_hash -> core_string;
+	core_result_s -> core_types;
+	core_result_s -> core_result;
+	core_result_s -> core_string;
+	core_text_parse -> core_types;
+	core_text_parse -> core_result;
+	core_text_parse -> core_string;
+	core_text_parse -> core_portability;
+	core_lexer -> core_types;
+	core_lexer -> core_string;
+	core_lexer -> core_result;
+	core_lexer -> core_text_parse;
+	core_lexer -> core_portability;
+	core_lexer_coord -> core_types;
+	core_lexer_coord -> core_string;
+	core_lexer_coord -> core_lexer;
+	core_lexer_coord -> core_text_parse;
+	core_lexer_coord -> core_result;
+	core_console -> core_types;
+	core_console -> core_string;
+	core_console -> core_memory;
+	core_console -> core_result;
+	core_file -> core_types;
+	core_file -> core_string;
+	core_file -> core_memory;
+	core_file -> core_result;
+	core_hash_map -> core_types;
+	core_hash_map -> core_memory;
+	core_hash_map -> core_hash;
+	core_hash_map -> core_result;
+	core_hash_map -> core_option;
+	aoc_value -> core_types;
+	aoc_value -> core_string;
+	aoc_value -> core_memory;
+	aoc_value -> core_result;
+	aoc_value -> core_console;
+}
+\enddot
+
+The puzzle modules sit above this graph. They import `aoc_value` and whichever core modules their solution needs, but they do not participate in the base-layer dependency chain.
+
 ## Suggested Reading Order
 
 ### 1. Scalar and utility base

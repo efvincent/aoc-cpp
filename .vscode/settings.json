@@ -1,7 +1,9 @@
 {
   "chat.tools.terminal.autoApprove": {
     "make": true,
-    "clang++": true
+    "clang++": true,
+    "doxygen": true,
+    "dot": true
   },
   "files.associations": {
     "*.cppm": "cpp"

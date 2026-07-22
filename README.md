@@ -22,6 +22,7 @@ This README is the documentation index and recommended reading path.
 
 4. [docs/CORE_MODULES_GUIDE.md](docs/CORE_MODULES_GUIDE.md)
 	- Guided overview of the foundational modules and how they connect.
+	- Includes a direct-import DAG for the base layer.
 	- Useful when moving from architecture notes into concrete APIs.
 
 5. Doxygen API reference
@@ -60,6 +61,7 @@ make lto
 make instrument
 make bear
 make docs
+make docs_pdf
 make clean
 make clean_all
 
@@ -72,6 +74,12 @@ make MODE=release bench N=2000 ARGS='2015 2'
 ```
 
 ### Benchmarking
+
+PDF docs note:
+
+- `make docs_pdf` requires a TeX installation with `listofitems` and `ulem` available.
+- On TeX Live user setups, one working option is:
+	- `tlmgr --usermode install listofitems ulem`
 
 The project includes a root benchmark script and matching make targets:
 

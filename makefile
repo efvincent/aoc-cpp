@@ -83,7 +83,7 @@ $(foreach src,$(MODULE_SRCS),$(eval $(patsubst $(SRC_DIR)/%.cppm,$(OBJ_DIR)/%.o,
 # Phase execution and meta rules 
 #====================================
 
-.PHONY: all debug release lto instrument bench bench-debug bench-release bench-lto bench-instrument clean docs clean_all bear
+.PHONY: all debug release lto instrument bench bench-debug bench-release bench-lto bench-instrument clean docs docs_pdf clean_all bear
 
 N ?= 1000
 ARGS ?= 2015 2
@@ -148,6 +148,20 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(MODULE_OBJS)
 docs:
 	@$(MKDIR) $(DOC_DIR)
 	doxygen $(DOXYFILE)
+
+docs_pdf: docs
+	@missing=0; \
+	for pkg in listofitems.sty ulem.sty; do \
+		if ! kpsewhich $$pkg >/dev/null 2>&1; then \
+			echo "Missing TeX package file: $$pkg"; \
+			missing=1; \
+		fi; \
+	done; \
+	if [ $$missing -ne 0 ]; then \
+		echo "Install required LaTeX packages (example: tlmgr --usermode install listofitems ulem)."; \
+		exit 1; \
+	fi
+	@$(MAKE) -C $(DOC_DIR)/latex
 
 clean:
 	$(RM) build/$(MODE)
