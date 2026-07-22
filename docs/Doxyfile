@@ -1010,6 +1010,7 @@ WARN_LOGFILE           = docs/doxygen-warnings.log
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = src \
+                         third_party/cpp-core/src \
                          docs
 
 # This tag can be used to specify the character encoding of the source files
